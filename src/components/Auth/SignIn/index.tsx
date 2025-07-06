@@ -1,47 +1,67 @@
 "use client";
-import { signIn } from "next-auth/react";
-import Link from "next/link";
+
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import Link from "next/link";
 import SocialSignIn from "../SocialSignIn";
-import Logo from "@/components/Layout/Header/Logo"
-import Loader from "@/components/Common/Loader";
+import Logo from "@/components/Layout/Header/Logo";
+import SmallSpinner from "@/components/Common/SmallSpinner";
+import { useAuth } from "@/context/AuthContext";
 
-const Signin = () => {
+const Signin = ({ onClose }: { onClose: () => void }) => {
   const router = useRouter();
+  const { setIsAuthenticated } = useAuth();
 
   const [loginData, setLoginData] = useState({
-    email: "",
+    username: "",
     password: "",
     checkboxToggle: false,
   });
   const [loading, setLoading] = useState(false);
 
-  const loginUser = (e: any) => {
+  const loginUser = async (e: any) => {
     e.preventDefault();
-
     setLoading(true);
-    signIn("credentials", { ...loginData, redirect: false })
-      .then((callback) => {
-        if (callback?.error) {
-          toast.error(callback?.error);
-          console.log(callback?.error);
-          setLoading(false);
-          return;
-        }
 
-        if (callback?.ok && !callback?.error) {
-          toast.success("Login successful");
-          setLoading(false);
-          router.push("/");
-        }
-      })
-      .catch((err) => {
-        setLoading(false);
-        console.log(err.message);
-        toast.error(err.message);
+    try {
+      const res = await fetch("http://localhost:8888/api/identity/auth/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: loginData.username,
+          password: loginData.password,
+        }),
       });
+
+      const data = await res.json();
+
+      // Hiệu ứng chờ 1s để mượt mà
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      if (!res.ok || data.code !== 0 || !data.result?.authenticated) {
+        toast.error(data.message || "Login failed");
+        console.error("Error:", data);
+        setLoading(false);
+        return;
+      }
+
+      const token = data.result.token;
+      toast.success("Login successful");
+
+      localStorage.setItem("token", token);
+
+      setIsAuthenticated(true); // ✅ Đánh dấu đã đăng nhập
+      onClose(); // ✅ Đóng modal => reset body overflow
+      router.push("/");
+    } catch (error: any) {
+      toast.error(error.message || "Something went wrong");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,41 +78,43 @@ const Signin = () => {
         </span>
       </span>
 
-      <form onSubmit={(e) => e.preventDefault()}>
+      <form onSubmit={loginUser}>
         <div className="mb-[22px]">
           <input
-            type="email"
-            placeholder="Email"
+            type="text"
+            placeholder="Username"
+            value={loginData.username}
             onChange={(e) =>
-              setLoginData({ ...loginData, email: e.target.value })
+              setLoginData({ ...loginData, username: e.target.value })
             }
-            className="w-full rounded-md border border-black/20 border-solid bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-grey focus:border-primary focus-visible:shadow-none text-white dark:focus:border-primary"
+            className="w-full rounded-md border border-black/20 bg-transparent px-5 py-3 text-base text-black outline-none placeholder:text-grey focus:border-primary"
           />
         </div>
         <div className="mb-[22px]">
           <input
             type="password"
             placeholder="Password"
+            value={loginData.password}
             onChange={(e) =>
               setLoginData({ ...loginData, password: e.target.value })
             }
-            className="w-full rounded-md border border-black/20 border-solid bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-grey focus:border-primary focus-visible:shadow-none text-white dark:focus:border-primary"
+            className="w-full rounded-md border border-black/20 bg-transparent px-5 py-3 text-base text-black outline-none placeholder:text-grey focus:border-primary"
           />
         </div>
         <div className="mb-9">
           <button
-            onClick={loginUser}
             type="submit"
-            className="bg-primary w-full py-3 rounded-lg text-18 font-medium border border-primary hover:text-primary hover:bg-transparent"
+            className="bg-primary w-full py-3 rounded-lg text-18 font-medium border border-primary hover:text-primary hover:bg-transparent flex justify-center items-center"
+            disabled={loading}
           >
-            Sign In {loading && <Loader />}
+            {loading ? <SmallSpinner /> : "Sign In"}
           </button>
         </div>
       </form>
 
       <Link
         href="/forgot-password"
-        className="mb-2 inline-block text-base text-dark hover:text-primary text-white dark:hover:text-primary"
+        className="mb-2 inline-block text-base text-dark hover:text-primary text-black"
       >
         Forgot Password?
       </Link>
