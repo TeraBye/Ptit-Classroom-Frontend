@@ -4,7 +4,9 @@ import Header from "@/components/Layout/Header";
 import Footer from "@/components/Layout/Footer";
 import { ThemeProvider } from "next-themes";
 import ScrollToTop from "@/components/ScrollToTop";
-import { AuthProvider } from "@/context/AuthContext"; // Thêm dòng này
+import { AuthProvider } from "@/context/AuthContext";
+import "react-datepicker/dist/react-datepicker.css";
+ // Thêm dòng này
 
 const font = Poppins({
   subsets: ["latin"],
@@ -23,7 +25,6 @@ export default function RootLayout({
           <AuthProvider> {/* ✅ Thêm AuthProvider ở đây */}
             <Header />
             {children}
-            <Footer />
             <ScrollToTop />
           </AuthProvider>
         </ThemeProvider>

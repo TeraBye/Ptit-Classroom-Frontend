@@ -1,12 +1,14 @@
-"use client";
-import { Bell, Grid, MessageSquare } from "lucide-react";
-import Image from "next/image";
-import { useState } from "react";
-import SmallSpinner from "@/components/Common/SmallSpinner";
-import { useAuth } from "@/context/AuthContext";
-import toast from "react-hot-toast";
+'use client';
+import { Bell, Grid, MessageSquare,ClipboardCheck, BadgeCheck,Settings,
+  LogOut
+ } from 'lucide-react';
+import Image from 'next/image';
+import { useState } from 'react';
+import SmallSpinner from '@/components/Common/SmallSpinner';
+import { useAuth } from '@/context/AuthContext';
+import toast from 'react-hot-toast';
 
-const LoggedInNav = () => {
+export default function LoggedInNav() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { setIsAuthenticated } = useAuth();
@@ -14,28 +16,23 @@ const LoggedInNav = () => {
   const handleLogout = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:8888/api/identity/auth/logout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:8888/api/identity/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
 
       const data = await res.json();
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Hiệu ứng loading 1s
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      if (!res.ok || data.code !== 0) {
-        toast.error("Logout failed");
-        return;
-      }
+      if (!res.ok || data.code !== 0) return toast.error('Logout failed');
 
-      localStorage.removeItem("token");
+      localStorage.removeItem('token');
       setIsAuthenticated(false);
-      toast.success("Logged out successfully");
+      toast.success('Logged out successfully');
     } catch (error) {
-      toast.error("Logout error");
+      toast.error('Logout error');
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -59,42 +56,70 @@ const LoggedInNav = () => {
       <div className="relative">
         <button
           onClick={() => setShowDropdown(!showDropdown)}
-          className="rounded-full overflow-hidden w-8 h-8 border border-gray-400"
+          className="rounded-full overflow-hidden w-9 h-9 border border-gray-400"
         >
           <Image
-            src="https://i.pinimg.com/736x/ce/fe/85/cefe85a625907a8004a96c72027d91c9.jpg"
+            src="https://i.pinimg.com/736x/54/a0/02/54a0026d53823a3556d7b333da079389.jpg"
             alt="Avatar"
-            width={32}
-            height={32}
+            width={36}
+            height={36}
+            className="object-cover"
           />
         </button>
 
         {showDropdown && (
-          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50">
-            <button className="w-full px-4 py-2 text-left text-black hover:bg-gray-100">
-              Profile
-            </button>
-            <button className="w-full px-4 py-2 text-left text-black hover:bg-gray-100">
-              Settings
-            </button>
-            <button
-              onClick={handleLogout}
-              className="w-full px-4 py-2 text-left text-black hover:bg-gray-100 flex items-center gap-2"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <SmallSpinner /> Logging out...
-                </>
-              ) : (
-                "Logout"
-              )}
-            </button>
+          <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg text-sm z-50">
+            <div className="p-4 border-b">
+              <div className="flex items-center gap-3">
+                <Image
+                  src="https://i.pinimg.com/736x/54/a0/02/54a0026d53823a3556d7b333da079389.jpg"
+                  alt="Avatar"
+                  width={40}
+                  height={40}
+                  className="rounded-full object-cover"
+                />
+                <div>
+                  <p className="font-semibold">Học sinh hư hỏng</p>
+                  <p className="text-gray-500 text-xs">Công nghệ thông tin</p>
+                </div>
+              </div>
+              <button className="mt-3 w-full py-2 bg-gray-100 rounded text-center hover:bg-gray-200">
+                View profile
+              </button>
+            </div>
+
+            <div className="py-2">
+              <button className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2">
+                 <Settings size={20} /> Edit My Account
+              </button>
+              <button className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2">
+                <ClipboardCheck size={20} /> Review Exam
+              </button>
+              <button className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2">
+                 <BadgeCheck size={20} /> My Scores
+              </button>
+            </div>
+
+            <div className="border-t">
+              <button
+                onClick={handleLogout}
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <SmallSpinner /> Logging out...
+                  </>
+                ) : (
+                  <>
+                     <LogOut size={20} /> Log Out
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         )}
       </div>
     </div>
   );
-};
-
-export default LoggedInNav;
+}
