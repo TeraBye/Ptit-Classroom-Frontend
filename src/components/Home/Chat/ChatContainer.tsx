@@ -3,6 +3,8 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getMyInfo, getConversations } from "@/app/api/libApi/api";
 import { Conversation } from "./Conversation";
+import { Search } from "lucide-react";
+
 
 interface Conversation {
   conver_id: number;
@@ -17,6 +19,7 @@ export default function ChatContainer() {
   const [username, setUsername] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -26,6 +29,7 @@ export default function ChatContainer() {
 
         const user = await getMyInfo(token);
         setUsername(user.username);
+        setUser(user);
 
         const convoList = await getConversations(user.username, token);
         setConversations(convoList);
@@ -39,11 +43,25 @@ export default function ChatContainer() {
     fetchData();
   }, []);
 
+  
   return (
     <div className="flex h-[calc(100vh-80px)]">
       {/* Message List */}
       <div className="w-80 bg-white p-4 border-r flex flex-col">
-        <h2 className="text-lg font-bold mb-4">Messages</h2>
+        <div className="mt-14 mb-4">
+          <h2 className="text-lg font-bold mb-2">Messages</h2>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search conversations..."
+              className="w-full px-4 py-2 pl-10 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            
+            />
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          </div>
+        </div>
+
+
 
         {loading ? (
           <div className="p-4">Loading...</div>
@@ -87,7 +105,8 @@ export default function ChatContainer() {
 
      {/* Conversation hoặc Placeholder */}
         {selectedConversation ? (
-          <Conversation />
+          <Conversation conversation={selectedConversation} currentUser={user} />
+
         ) : (
           <div className="flex-1 flex justify-center items-center h-full">
             <div className="flex flex-col items-center text-center">
@@ -98,7 +117,7 @@ export default function ChatContainer() {
                 height={120}
                 className="mb-4 opacity-80"
               />
-              <p className="text-lg text-gray-500">Hãy thêm đoạn hội thoại của bạn</p>
+              <p className="text-lg text-gray-500">Choose your conversation</p>
             </div>
           </div>
         )}
