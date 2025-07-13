@@ -1,9 +1,11 @@
 "use client";
 import { StarIcon, UserIcon, EyeIcon, Bars3Icon, ChartBarIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
-import React from "react";
+import { useRouter } from "next/navigation";
+import React, { useState } from "react";
 
-const Item = () => {
+const Item = ({ classroom }: { classroom: any }) => {
+  const router = useRouter();
   return (
     <div className="w-64 bg-white rounded-lg overflow-hidden shadow-md">
 
@@ -20,20 +22,20 @@ const Item = () => {
           2025
         </div>
         <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded">
-          public
+          {classroom.isPublic ? "public" : "private"}
         </div>
       </div>
 
       {/* Course info */}
       <div className="p-4 space-y-2">
-        <p className="text-gray-500 text-sm">Tru's classroom</p>
-        <h3 className="text-lg font-semibold">Lập trình hướng dịch vụ</h3>
+        {/* <p className="text-gray-500 text-sm">Tru's classroom</p> */}
+        <h3 className="text-lg font-semibold">{classroom.name}</h3>
 
         {/* Stats */}
         <div className="flex justify-between mt-4 text-gray-600 text-sm">
           <div className="flex items-center gap-1">
             <UserIcon className="w-4 h-4" />
-            <span>Huynh Trung Tru</span>
+            <span>{classroom.teacherUsername}</span>
           </div>
           <div className="flex items-center gap-1">
             <EyeIcon className="w-4 h-4" />
@@ -49,7 +51,7 @@ const Item = () => {
           </div>
           <button
             className="w-[100px] py-2 border border-blue-500 text-blue-500 rounded hover:bg-blue-50"
-            onClick={() => alert("Create new classroom")}
+            onClick={() => router.push(`/class-inside`)}
           >
             Join
           </button>
