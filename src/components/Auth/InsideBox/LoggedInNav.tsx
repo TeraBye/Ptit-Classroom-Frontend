@@ -1,38 +1,72 @@
-'use client';
-import { Bell, Grid, MessageSquare,ClipboardCheck, BadgeCheck,Settings,
-  LogOut
- } from 'lucide-react';
-import Image from 'next/image';
-import { useState } from 'react';
-import SmallSpinner from '@/components/Common/SmallSpinner';
-import { useAuth } from '@/context/AuthContext';
-import toast from 'react-hot-toast';
+"use client";
+import {
+  Bell,
+  Grid,
+  MessageSquare,
+  ClipboardCheck,
+  BadgeCheck,
+  Settings,
+  LogOut,
+  BookOpen,
+  HelpCircle,
+  Users,
+} from "lucide-react";
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import SmallSpinner from "@/components/Common/SmallSpinner";
+import { useAuth } from "@/context/AuthContext";
+import toast from "react-hot-toast";
+import { getMyInfo } from "@/app/api/libApi/api";
+import { useRouter } from "next/navigation";
 
 export default function LoggedInNav() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { setIsAuthenticated } = useAuth();
+  const [token, setToken] = useState<string | undefined>(undefined);
+  const [user, setUser] = useState<{ username: string; role: string } | null>(
+    null
+  );
+
+  const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setToken(localStorage.getItem("token") || undefined);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (token) {
+      getMyInfo(token).then((user) => {
+        setUser(user); // user.role sẽ có giá trị "TEACHER" hoặc "STUDENT"
+      });
+    }
+  }, [token]);
 
   const handleLogout = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:8888/api/identity/auth/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-      });
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        "http://localhost:8888/api/identity/auth/logout",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        }
+      );
 
       const data = await res.json();
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      if (!res.ok || data.code !== 0) return toast.error('Logout failed');
+      if (!res.ok || data.code !== 0) return toast.error("Logout failed");
 
-      localStorage.removeItem('token');
+      localStorage.removeItem("token");
       setIsAuthenticated(false);
-      toast.success('Logged out successfully');
+      toast.success("Logged out successfully");
     } catch (error) {
-      toast.error('Logout error');
+      toast.error("Logout error");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -79,8 +113,8 @@ export default function LoggedInNav() {
                   className="rounded-full object-cover"
                 />
                 <div>
-                  <p className="font-semibold">Học sinh hư hỏng</p>
-                  <p className="text-gray-500 text-xs">Công nghệ thông tin</p>
+                  <p className="font-semibold">{user?.fullName}</p>
+                  <p className="text-gray-500 text-xs">{user?.username}</p>
                 </div>
               </div>
               <button className="mt-3 w-full py-2 bg-gray-100 rounded text-center hover:bg-gray-200">
@@ -90,14 +124,37 @@ export default function LoggedInNav() {
 
             <div className="py-2">
               <button className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2">
-                 <Settings size={20} /> Edit My Account
+                <Settings size={20} /> Edit My Account
               </button>
-              <button className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2">
-                <ClipboardCheck size={20} /> Review Exam
-              </button>
-              <button className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2">
-                 <BadgeCheck size={20} /> My Scores
-              </button>
+              {user?.role === "STUDENT" && (
+                <>
+                  <button className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2">
+                    <ClipboardCheck size={20} /> Review Exam
+                  </button>
+                  <button className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2">
+                    <BadgeCheck size={20} /> My Scores
+                  </button>
+                </>
+              )}
+
+              {user?.role === "TEACHER" && (
+                <>
+                  <button
+                    className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+                    onClick={() => router.push("/classroom")}
+                  >
+                    <BookOpen size={20} /> My Classes
+                  </button>
+                  <button className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+                    onClick={() => router.push("/questions")}
+                  >
+                    <HelpCircle size={20} /> Questions
+                  </button>
+                  <button className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2">
+                    <Users size={20} /> Students
+                  </button>
+                </>
+              )}
             </div>
 
             <div className="border-t">
@@ -112,7 +169,7 @@ export default function LoggedInNav() {
                   </>
                 ) : (
                   <>
-                     <LogOut size={20} /> Log Out
+                    <LogOut size={20} /> Log Out
                   </>
                 )}
               </button>
