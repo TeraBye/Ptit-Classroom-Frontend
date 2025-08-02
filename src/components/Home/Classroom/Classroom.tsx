@@ -426,7 +426,7 @@ const Classroom = () => {
                     );
                     setShowJoinModal(false);
                     setClassCode("");
-                    router.push(`/classroom/${res.classroom.id}`);
+                    router.push(`/class-inside/${res.classroom.id}`);
                   } catch (err) {
                     alert("Join failed! Please check your code.");
                   } finally {
