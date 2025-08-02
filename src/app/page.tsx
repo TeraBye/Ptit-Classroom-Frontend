@@ -2,7 +2,6 @@ import React from "react";
 import Hero from "@/components/Home/Hero";
 import Companies from "@/components/Home/Companies";
 import Courses from "@/components/Home/Courses";
-import Classroom from "@/components/Home/Classroom/Classroom";
 import Mentor from "@/components/Home/Mentor";
 import Testimonial from "@/components/Home/Testimonials";
 import Newsletter from "@/components/Home/Newsletter";

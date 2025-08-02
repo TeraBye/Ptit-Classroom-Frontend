@@ -78,9 +78,7 @@ const Classroom = () => {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [token, setToken] = useState<string | undefined>(undefined);
-  const [user, setUser] = useState<{ username: string; role: string } | null>(
-    null
-  );
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const router = useRouter();
@@ -179,7 +177,6 @@ const Classroom = () => {
         ...form,
         subject: { id: form.subject }, // chỉ cần id
       };
-      console.log("DATA SEND:", data);
       await createClassroom(data, token);
       setShowModal(false);
       setForm({
@@ -294,13 +291,15 @@ const Classroom = () => {
           ) : (
             <div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {user?.role === "TEACHER" && classrooms.map((classroom) => (
-                  <Item key={classroom.id} classroom={classroom} />
-                ))}
+                {user?.role === "TEACHER" &&
+                  classrooms.map((classroom) => (
+                    <Item key={classroom.id} classroom={classroom} />
+                  ))}
 
-                {user?.role === "STUDENT" && classrooms.map((classroom) => (
-                  <Item key={classroom.id} classroom={classroom.classroom} />
-                ))}
+                {user?.role === "STUDENT" &&
+                  classrooms.map((classroom) => (
+                    <Item key={classroom.id} classroom={classroom.classroom} />
+                  ))}
               </div>
               <div className="flex justify-center mt-4 gap-2">
                 <button
