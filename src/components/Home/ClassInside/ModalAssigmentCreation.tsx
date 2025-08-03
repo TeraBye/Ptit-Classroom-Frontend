@@ -4,10 +4,20 @@ import { X, Paperclip } from "lucide-react";
 import DatePicker from "react-datepicker";
 import { format } from "date-fns";
 import "react-datepicker/dist/react-datepicker.css";
+import { Client, Storage, ID } from "appwrite";
+
+// --- Appwrite config
+const client = new Client();
+client.setEndpoint("https://cloud.appwrite.io/v1").setProject("67f02a3c00396aab7f01");
+const storage = new Storage(client);
+const BUCKET_ID = "67f02a57000c66380420";
+const ProjectID = "67f02a3c00396aab7f01";
 
 export function AssignmentModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [files, setFiles] = useState<File[]>([]);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -24,6 +34,46 @@ export function AssignmentModal({ isOpen, onClose }: { isOpen: boolean; onClose:
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const uploadFileToAppwrite = async (file: File) => {
+    const response = await storage.createFile(BUCKET_ID, ID.unique(), file);
+    return `https://cloud.appwrite.io/v1/storage/buckets/${BUCKET_ID}/files/${response.$id}/view?project=${ProjectID}`;
+  };
+
+  const handlePost = async () => {
+    try {
+      let fileUrl = "";
+      if (files.length > 0) {
+        fileUrl = await uploadFileToAppwrite(files[0]);
+      }
+
+      const formattedDeadline = deadline
+        ? format(deadline, "HH:mm:ss dd:MM:yyyy")
+        : null;
+
+      const token = localStorage.getItem("token");
+
+      await fetch(`http://localhost:8888/api/post/createPost`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title,
+          content,
+          username: "teacher001",
+          deadline: formattedDeadline,
+          fileUrl: fileUrl || "",
+          classId: "1",
+        }),
+      });
+
+      onClose();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -35,21 +85,20 @@ export function AssignmentModal({ isOpen, onClose }: { isOpen: boolean; onClose:
         className="bg-white rounded-lg w-[450px] shadow-lg font-sans"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="bg-blue-500 text-white text-lg font-semibold p-3 rounded-t-lg flex justify-between items-center">
           <span>New Lesson</span>
           <button onClick={onClose} className="hover:text-gray-200">X</button>
         </div>
 
-        {/* Body */}
         <div className="p-4 space-y-4 text-gray-800">
           <input
             type="text"
-            placeholder="Tittle"
+            placeholder="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             className="w-full p-2 border rounded text-gray-800 placeholder-gray-400 focus:outline-none focus:ring focus:border-blue-300"
           />
 
-          {/* Deadline */}
           <div>
             <label className="block text-sm font-medium mb-1">Deadline</label>
             <DatePicker
@@ -61,14 +110,14 @@ export function AssignmentModal({ isOpen, onClose }: { isOpen: boolean; onClose:
             />
           </div>
 
-          {/* Content */}
           <textarea
             placeholder="Content"
             rows={4}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
             className="w-full p-2 border rounded text-gray-800 placeholder-gray-400 focus:outline-none focus:ring focus:border-blue-300"
           />
 
-          {/* File Upload */}
           <div>
             <label className="block text-sm font-medium mb-1">Attach file</label>
             <div className="flex items-center gap-2">
@@ -105,7 +154,6 @@ export function AssignmentModal({ isOpen, onClose }: { isOpen: boolean; onClose:
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex justify-end gap-3 px-4 py-3 border-t">
           <button
             onClick={onClose}
@@ -113,7 +161,10 @@ export function AssignmentModal({ isOpen, onClose }: { isOpen: boolean; onClose:
           >
             Cancel
           </button>
-          <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          <button
+            onClick={handlePost}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
             Post
           </button>
         </div>

@@ -1,59 +1,177 @@
-// components/UserProfile/CenterContent.tsx
 'use client';
 
 import Image from "next/image";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { MessageCircle,Bookmark, Mail } from "lucide-react";
+import { MessageCircle, Bookmark, Mail, X } from "lucide-react";
+import { Comment, CommentProps } from "@/components/Home/ClassInside/Comment";
+import { CommentModal } from "@/components/Home/ClassInside/CommentModal";
 
-export function CenterContent() {
+interface PostProps {
+  avatar: string;
+  fullName: string;
+  createdAt: string;
+  title: string;
+  deadline: string;
+  content: string;
+  fileUrl: string;
+}
+
+const getDaysLeft = (deadline: string) => {
+  const deadlineDate = new Date(deadline);
+  const now = new Date();
+  const diffTime = deadlineDate.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) return "(Hết hạn)";
+  return `(Còn ${diffDays} ngày)`;
+};
+
+const getTimeAgo = (createdAt: string) => {
+  const createdDate = new Date(createdAt);
+  const now = new Date();
+  const diffMs = now.getTime() - createdDate.getTime();
+  const seconds = Math.floor(diffMs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days} ngày trước`;
+  if (hours > 0) return `${hours} giờ trước`;
+  if (minutes > 0) return `${minutes} phút trước`;
+  return `Vừa xong`;
+};
+
+export function CenterContent({
+  avatar,
+  fullName,
+  createdAt,
+  title,
+  deadline,
+  content,
+  fileUrl,
+}: PostProps) {
+  const [showPreview, setShowPreview] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+
+  const mockComments: CommentProps[] = [
+    {
+      avatar: "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
+      username: "student001",
+      content: "Thầy giảng rất dễ hiểu ạ!",
+      createdAt: new Date().toISOString(),
+      replies: [
+        {
+          avatar: "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
+          username: "teacher001",
+          content: "Cảm ơn em nha!",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    },
+    {
+      avatar: "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
+      username: "student002",
+      content: "Deadline hơi gấp thầy ơi.",
+      createdAt: new Date().toISOString(),
+    },
+  ];
+
   return (
-    <Card className="flex-1">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
+    <Card className="w-full shadow-md rounded-lg border">
+      <CardContent className="p-5 space-y-4">
+        <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Image src="https://i.pinimg.com/736x/5c/57/b9/5c57b919d1c2fc9975a30ccaa06f1448.jpg" 
-            alt="kik" width={40} height={40} className="rounded-full" />
+            <Image
+              src={avatar}
+              alt="avatar"
+              width={40}
+              height={40}
+              className="rounded-full object-cover"
+            />
             <div>
-              <h3 className="font-semibold">Huynh Trung Tru</h3>
-              <p className="text-xs text-gray-500">3 min ago</p>
+              <h3 className="font-semibold text-base">{fullName}</h3>
+              <p className="text-xs text-gray-500">{getTimeAgo(createdAt)}</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <Bookmark className="text-green-500 cursor-pointer" />
             <Mail className="text-red-500 cursor-pointer" />
           </div>
         </div>
 
-        <p className="mt-2 font-semibold">Bài tập mới chương 1</p>
-        <div className="flex gap-3 mt-2">
-          <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded">Deadline: 20h 20/10/2023</span>
+        <h4 className="font-semibold text-lg">{title}</h4>
+
+        <div className="flex gap-3">
+          <span className="bg-blue-100 text-blue-700 text-xs font-medium px-3 py-1 rounded">
+            Deadline: {new Date(deadline).toLocaleString()} {getDaysLeft(deadline)}
+          </span>
         </div>
 
-        <p className="mt-3 text-gray-600 text-sm">
-          Các em làm bài tập chương 1, nộp bài trước 20h ngày 20/10/2023. Các 
-          em có thể tham khảo tài liệu đính kèm để hoàn thành bài tập.
-        </p>
+        <p className="text-gray-700 leading-relaxed">{content}</p>
 
-        <div className="mt-2 text-blue-500 cursor-pointer text-sm">file đính kèm</div>
+        {fileUrl && (
+          <div className="border rounded-md p-4 mt-3 bg-gray-50 flex items-center justify-between hover:shadow-sm transition">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-blue-500 text-lg">📄</span>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700">
+                  {fileUrl.split("/").pop()}
+                </p>
+                <p className="text-xs text-gray-500">File đính kèm</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowPreview(true)}
+              className="text-blue-600 text-sm hover:underline"
+            >
+              Xem file
+            </button>
+          </div>
+        )}
 
-        <div className="flex flex-wrap gap-2 mt-3">
-          {['fileA.doc','fileB.doc'].map(skill => (
-            <span key={skill} className="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">{skill}</span>
-          ))}
-        </div>
-
-        <div className="mt-4 flex justify-between text-sm text-gray-500">
+        <div className="flex justify-between items-center text-sm text-gray-500 pt-2 border-t">
           <button
-            className="flex gap-2 items-center text-gray-500 hover:text-blue-500 transition"
-            onClick={() => console.log("Clicked Discuss")}
+            className="flex items-center gap-2 text-gray-600 hover:text-blue-500 transition"
+            onClick={() => setShowComments(true)}
           >
-            <MessageCircle size={25} />
-            <span>Discuss</span>
+            <MessageCircle size={20} />
+            <span>Bình luận</span>
           </button>
+          <div>{mockComments.length} bình luận</div>
+        </div>
 
-          <div>Discussions 50</div>
+        <div className="mt-3">
+          <input
+            type="text"
+            placeholder="Viết bình luận..."
+            className="w-full border rounded px-3 py-2 text-sm focus:outline-blue-400"
+          />
         </div>
       </CardContent>
+
+      {showPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+          <div className="relative bg-white rounded-lg shadow-lg w-11/12 h-5/6 flex flex-col">
+            <button
+              className="absolute top-3 right-3 text-gray-500 hover:text-red-500"
+              onClick={() => setShowPreview(false)}
+            >
+              <X size={24} />
+            </button>
+            <iframe
+              src={fileUrl}
+              className="flex-1 rounded-b-lg"
+              title="File Preview"
+            />
+          </div>
+        </div>
+      )}
+
+      {showComments && (
+        <CommentModal comments={mockComments} onClose={() => setShowComments(false)} />
+      )}
     </Card>
   );
 }

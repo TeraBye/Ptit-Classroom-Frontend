@@ -1,11 +1,32 @@
 "use client";
-import { useState } from "react";
+
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { AssignmentModal } from "./ModalAssigmentCreation";
+import { useEffect, useState } from "react";
+import { getMyInfo, getConversations } from "@/app/api/libApi/api";
 
 export function LeftSidebar() {
   const [showModal, setShowModal] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const user = await getMyInfo(token);
+        setUser(user);
+
+        const convoList = await getConversations(user.username, token);
+      } catch (error) {
+        console.error("Error ", error);
+    };
+
+    fetchData();
+  }
+  }, []);
 
   return (
     <div className="w-full md:w-64 bg-white rounded-lg overflow-hidden shadow-md p-4 text-center">
