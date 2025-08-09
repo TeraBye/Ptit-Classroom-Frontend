@@ -6,6 +6,7 @@ import { AssignmentModal } from "./ModalAssigmentCreation";
 import { useEffect, useState } from "react";
 import { getMyInfo, getConversations } from "@/app/api/libApi/api";
 
+
 export function LeftSidebar() {
   const [showModal, setShowModal] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -16,43 +17,51 @@ export function LeftSidebar() {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const user = await getMyInfo(token);
-        setUser(user);
+        const userData = await getMyInfo(token);
+        setUser(userData);
 
-        const convoList = await getConversations(user.username, token);
+        const convoList = await getConversations(userData.username, token);
+        console.log("Conversations:", convoList);
       } catch (error) {
         console.error("Error ", error);
+      }
     };
 
     fetchData();
-  }
   }, []);
 
   return (
     <div className="w-full md:w-64 bg-white rounded-lg overflow-hidden shadow-md p-4 text-center">
       <div className="flex justify-center">
-        <Image src="https://i.pinimg.com/736x/5c/57/b9/5c57b919d1c2fc9975a30ccaa06f1448.jpg" alt="John Doe" width={100} height={100} className="rounded-full" />
+        <Image
+          src={user?.avatar || "https://static.vecteezy.com/system/resources/thumbnails/063/477/498/small_2x/illustration-of-generic-male-avatar-in-gray-tones-for-anonymous-profile-placeholder-with-neutral-expression-designed-for-use-in-online-platforms-and-social-media-vector.jpg"}
+          alt={user?.fullName || "User Avatar"}
+          width={100}
+          height={100}
+          className="rounded-full"
+        />
       </div>
-      <h2 className="mt-4 text-xl font-bold">Huynh Trung Tru</h2>
-      <p className="text-gray-600">Lập trình hướng đối tượng</p>
+      <h2 className="mt-4 text-xl font-bold">{user?.fullName}</h2>
+      <p className="text-gray-600">{user?.role}</p>
 
-      <div className="mt-4">
-        <div className="flex justify-between">
-          <div>
-            <p className="text-sm text-gray-500">Assignments</p>
-            <p className="font-semibold">10</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Exams</p>
-            <p className="font-semibold">2</p>
-          </div>
-        </div>
-      </div>
+      <Button className="mt-4 w-full" variant="outline">
+        Join meeting
+      </Button>
 
-      <Button className="mt-4 w-full" variant="outline">Join meeting</Button>
-      <Button onClick={() => setShowModal(true)} className="mt-4 w-full" variant="outline">New lesson</Button>
+      {user?.role === "TEACHER" && (
+        <Button
+          onClick={() => setShowModal(true)}
+          className="mt-4 w-full"
+          variant="outline"
+        >
+          New lesson
+        </Button>
+      )}
 
-      <AssignmentModal isOpen={showModal} onClose={() => setShowModal(false)} />
+      <AssignmentModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+      />
     </div>
   );
 }
