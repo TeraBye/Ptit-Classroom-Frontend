@@ -49,7 +49,7 @@ export default function UserProfileCard() {
   useEffect(() => {
     if (!id) return;
 
-    const socket = new SockJS("http://localhost:8086/api/post/ws-post");
+    const socket = new SockJS("http://localhost:8087/api/post/ws-post");
     const client = new Client({
       webSocketFactory: () => socket,
       debug: (str) => console.log(str),

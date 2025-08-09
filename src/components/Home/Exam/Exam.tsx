@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/untils";
-
+import { useParams } from "next/navigation";
+import { getMyInfo } from "@/app/api/libApi/api";
 const letterMap = ["A", "B", "C", "D", "E", "F"];
 
 const formatTime = (seconds: number) => {
@@ -25,11 +26,33 @@ export default function Quiz() {
   const [showResultModal, setShowResultModal] = useState(false);
   const [resultData, setResultData] = useState<any>(null);
 
+  const params = useParams();
+  const examId = params.examId;
+
+  const [user, setUser] = useState<any>(null);
+  
   useEffect(() => {
+      const fetchData = async () => {
+        try {
+          const token = localStorage.getItem("token");
+          if (!token) return;
+  
+          const userData = await getMyInfo(token);
+          setUser(userData);
+        } catch (error) {
+          console.error("Error ", error);
+        }
+      };
+  
+      fetchData();
+    }, []);
+
+  useEffect(() => {
+     if (!user) return;
     const fetchQuestions = async () => {
       try {
         const res = await fetch(
-          "http://localhost:8888/api/exam/getExamSubmission?student=student001&examId=2",
+          `http://localhost:8888/api/exam/getExamSubmission?student=${user.username}&examId=${examId}`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -53,7 +76,7 @@ export default function Quiz() {
     };
 
     fetchQuestions();
-  }, []);
+  }, [user, examId]);
 
   useEffect(() => {
     if (loading || questions.length === 0) return;
@@ -96,7 +119,7 @@ export default function Quiz() {
   const updateExamSubmission = async () => {
     try {
       const res = await fetch(
-        "http://localhost:8888/api/exam/updateExamSubmission?student=student001&examId=2",
+        `http://localhost:8888/api/exam/updateExamSubmission?student=${user.username}&examId=${examId}`,
         {
           method: "PUT",
           headers: {
