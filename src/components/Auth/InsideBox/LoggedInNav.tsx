@@ -79,7 +79,8 @@ export default function LoggedInNav() {
         <Grid className="text-black" size={20} />
       </button>
 
-      <button className="p-2 rounded-full hover:bg-gray-200">
+      <button className="p-2 rounded-full hover:bg-gray-200" 
+      onClick={() => router.push("/chat")}>
         <MessageSquare className="text-black" size={20} />
       </button>
 
