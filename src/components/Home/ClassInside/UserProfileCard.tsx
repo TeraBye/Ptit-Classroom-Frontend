@@ -11,6 +11,7 @@ import SockJS from "sockjs-client";
 
 interface Post {
   postId: number;
+  assignmnetId: number;
   avatar: string;
   fullName: string;
   createdAt: string;
@@ -92,6 +93,7 @@ export default function UserProfileCard() {
             deadline={post.deadline}
             content={post.content}
             fileUrl={post.fileUrl}
+            assignmentId={post.assignmnetId}
           />
         ))
       ) : (

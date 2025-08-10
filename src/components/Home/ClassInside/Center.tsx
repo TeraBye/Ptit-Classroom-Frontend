@@ -1,11 +1,15 @@
-'use client';
+"use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { MessageCircle, Bookmark, Mail, X } from "lucide-react";
+import { MessageCircle, Upload, Mail, X, ClipboardList } from "lucide-react";
 import { Comment, CommentProps } from "@/components/Home/ClassInside/Comment";
 import { CommentModal } from "@/components/Home/ClassInside/CommentModal";
+import { SubmitModal } from "@/components/Home/ClassInside/SubmitModal";
+import { Client, Storage, ID } from "appwrite";
+import { format } from "date-fns";
+import { getMyInfo } from "@/app/api/libApi/api";
 
 interface PostProps {
   avatar: string;
@@ -15,6 +19,7 @@ interface PostProps {
   deadline: string;
   content: string;
   fileUrl: string;
+  assignmentId: number;
 }
 
 const getDaysLeft = (deadline: string) => {
@@ -41,6 +46,15 @@ const getTimeAgo = (createdAt: string) => {
   return `Vừa xong`;
 };
 
+// --- Appwrite config
+const client = new Client();
+client
+  .setEndpoint("https://cloud.appwrite.io/v1")
+  .setProject("67f02a3c00396aab7f01");
+const storage = new Storage(client);
+const BUCKET_ID = "67f02a57000c66380420";
+const ProjectID = "67f02a3c00396aab7f01";
+
 export function CenterContent({
   avatar,
   fullName,
@@ -49,19 +63,73 @@ export function CenterContent({
   deadline,
   content,
   fileUrl,
+  assignmentId,
 }: PostProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const userData = await getMyInfo(token);
+        setUser(userData);
+      } catch (error) {
+        console.error("Error ", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleSubmission = async (note: string, file: File | null) => {
+    try {
+      let fileUrl = "";
+      if (file) {
+        fileUrl = await uploadFileToAppwrite(file);
+      }
+
+      const token = localStorage.getItem("token");
+      await fetch(`http://localhost:8888/api/assignments/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          assignmentId,
+          studentUsername: user?.username,
+          note,
+          fileUrl,
+        }),
+      });
+
+      setShowSubmitModal(false);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleViewSubmissions = () => {
+    // TODO: Implement view submissions for teachers
+    console.log("View submissions");
+  };
 
   const mockComments: CommentProps[] = [
     {
-      avatar: "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
+      avatar:
+        "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
       username: "student001",
       content: "Thầy giảng rất dễ hiểu ạ!",
       createdAt: new Date().toISOString(),
       replies: [
         {
-          avatar: "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
+          avatar:
+            "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
           username: "teacher001",
           content: "Cảm ơn em nha!",
           createdAt: new Date().toISOString(),
@@ -69,12 +137,19 @@ export function CenterContent({
       ],
     },
     {
-      avatar: "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
+      avatar:
+        "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
       username: "student002",
       content: "Deadline hơi gấp thầy ơi.",
       createdAt: new Date().toISOString(),
     },
   ];
+
+  // Submit assignments
+  const uploadFileToAppwrite = async (file: File) => {
+    const response = await storage.createFile(BUCKET_ID, ID.unique(), file);
+    return `https://cloud.appwrite.io/v1/storage/buckets/${BUCKET_ID}/files/${response.$id}/view?project=${ProjectID}`;
+  };
 
   return (
     <Card className="w-full shadow-md rounded-lg border">
@@ -94,8 +169,18 @@ export function CenterContent({
             </div>
           </div>
           <div className="flex gap-3">
-            <Bookmark className="text-green-500 cursor-pointer" />
-            <Mail className="text-red-500 cursor-pointer" />
+            {user?.role === "student" ? (
+              <Upload
+                className="text-green-500 cursor-pointer hover:text-green-600"
+                onClick={() => setShowSubmitModal(true)}
+              />
+            ) : (
+              <ClipboardList
+                className="text-blue-500 cursor-pointer hover:text-blue-600"
+                onClick={handleViewSubmissions}
+              />
+            )}
+            <Mail className="text-red-500 cursor-pointer hover:text-red-600" />
           </div>
         </div>
 
@@ -103,7 +188,8 @@ export function CenterContent({
 
         <div className="flex gap-3">
           <span className="bg-blue-100 text-blue-700 text-xs font-medium px-3 py-1 rounded">
-            Deadline: {new Date(deadline).toLocaleString()} {getDaysLeft(deadline)}
+            Deadline: {new Date(deadline).toLocaleString()}{" "}
+            {getDaysLeft(deadline)}
           </span>
         </div>
 
@@ -170,7 +256,17 @@ export function CenterContent({
       )}
 
       {showComments && (
-        <CommentModal comments={mockComments} onClose={() => setShowComments(false)} />
+        <CommentModal
+          comments={mockComments}
+          onClose={() => setShowComments(false)}
+        />
+      )}
+
+      {showSubmitModal && (
+        <SubmitModal
+          onClose={() => setShowSubmitModal(false)}
+          onSubmit={handleSubmission}
+        />
       )}
     </Card>
   );

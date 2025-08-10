@@ -32,6 +32,13 @@ interface Section {
 
 const PAGE_SIZE = 10;
 
+// Thêm interface cho user
+interface User {
+  username: string;
+  role: 'TEACHER' | 'STUDENT';
+  // ... các trường khác nếu cần
+}
+
 const Classroom = () => {
   const [sections] = useState<Section[]>([
     {
@@ -78,7 +85,7 @@ const Classroom = () => {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [token, setToken] = useState<string | undefined>(undefined);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
 
   const router = useRouter();
@@ -329,8 +336,9 @@ const Classroom = () => {
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-8 w-full max-w-md relative">
               <button
-                className="absolute top-2 right-2 text-gray-500 hover:text-red-500"
+                className="absolute top-2 right-2 text-gray-500 hover:text-red-500 flex items-center justify-center w-8 h-8 text-2xl"
                 onClick={() => setShowModal(false)}
+                aria-label="Close"
               >
                 ×
               </button>
@@ -369,28 +377,46 @@ const Classroom = () => {
                   />
                   Public
                 </label>
-                {/* Combobox môn học có search */}
-                <div>
+                {/* Combobox môn học autocomplete */}
+                <div className="relative">
                   <input
                     className="w-full border p-2 rounded mb-2"
                     placeholder="Search subject..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <select
-                    className="w-full border p-2 rounded"
-                    name="subject"
-                    value={form.subject}
-                    onChange={handleChange}
+                    value={form.subject ? subjects.find(s => s.id === form.subject)?.name || search : search}
+                    onChange={e => {
+                      setSearch(e.target.value);
+                      setForm(prev => ({ ...prev, subject: '' }));
+                    }}
+                    autoComplete="off"
+                    onFocus={() => setSearch('')}
                     required
-                  >
-                    <option value="">-- Select subject --</option>
-                    {filteredSubjects.map((subject) => (
-                      <option key={subject.id} value={subject.id}>
-                        {subject.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
+                  {/* Dropdown gợi ý môn học */}
+                  {search && !form.subject && (
+                    <div className="absolute left-0 right-0 bg-white border rounded shadow z-10 max-h-40 overflow-auto">
+                      {filteredSubjects.length === 0 && (
+                        <div className="p-2 text-gray-400">No subject found</div>
+                      )}
+                      {filteredSubjects.map(subject => (
+                        <div
+                          key={subject.id}
+                          className="p-2 hover:bg-blue-100 cursor-pointer"
+                          onMouseDown={() => {
+                            setForm(prev => ({ ...prev, subject: subject.id }));
+                            setSearch('');
+                          }}
+                        >
+                          {subject.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Nếu đã chọn môn, hiện nút xóa/chọn lại */}
+                  {form.subject && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-red-500" onClick={() => setForm(prev => ({ ...prev, subject: '' }))} title="Clear">
+                      ×
+                    </div>
+                  )}
                 </div>
                 <button
                   type="submit"
@@ -407,8 +433,9 @@ const Classroom = () => {
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-8 w-full max-w-md relative">
               <button
-                className="absolute top-2 right-2 text-gray-500 hover:text-red-500"
+                className="absolute top-2 right-2 text-gray-500 hover:text-red-500 flex items-center justify-center w-8 h-8 text-2xl"
                 onClick={() => setShowJoinModal(false)}
+                aria-label="Close"
               >
                 ×
               </button>
