@@ -48,11 +48,11 @@ export default function Quiz() {
     }, []);
 
   useEffect(() => {
-     if (!user) return;
+    if (!user) return;
     const fetchQuestions = async () => {
       try {
         const res = await fetch(
-          `http://localhost:8888/api/exam/getExamSubmission?student=${user.username}&examId=${examId}`,
+          `http://localhost:8888/api/exam/getStudentAnswer?student=${user.username}&examId=${examId}`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -60,14 +60,25 @@ export default function Quiz() {
           }
         );
         const data = await res.json();
-        const q = data.result.questionResponses.map((item: any) => ({
-          id: item.id,
+
+        // Tạo mảng câu hỏi
+        const q = data.result.answers.map((item: any) => ({
+          id: item.questionId,
           question: item.content,
           options: [item.optionA, item.optionB, item.optionC, item.optionD],
+          selectedOption: item.selectedOption,
         }));
+
         setQuestions(q);
-        setAnswers(Array(q.length).fill(null));
+        setAnswers(q.map((item: any) => item.selectedOption || null));
         setExamSubmissionId(data.result.examSubmission.id);
+
+        // ✅ Tính thời gian còn lại
+        const durationMinutes = data.result.examSubmission.duration || 15; // phút
+        const examTimeSeconds = data.result.examSubmission.examTime || 0; // giây đã làm
+        const calculatedTimeLeft = durationMinutes * 60 - examTimeSeconds;
+        setTimeLeft(Math.max(calculatedTimeLeft, 0));
+
       } catch (error) {
         console.error("Error fetching questions:", error);
       } finally {
@@ -77,6 +88,7 @@ export default function Quiz() {
 
     fetchQuestions();
   }, [user, examId]);
+
 
   useEffect(() => {
     if (loading || questions.length === 0) return;

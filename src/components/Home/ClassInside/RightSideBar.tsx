@@ -122,6 +122,41 @@ export default function ExamReviewModal({ isOpen, onClose, classId, user }: Exam
 
   const router = useRouter();
 
+  const [problemExams, setProblemExams] = useState<number[]>([]); // danh sách examId bị isProblemExam=false
+
+  useEffect(() => {
+  if (user?.role === "STUDENT" && exams.length > 0) {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const fetchStatuses = async () => {
+      try {
+        const results = await Promise.all(
+          exams.map(async (exam) => {
+            const res = await fetch(
+              `http://localhost:8888/api/exam/isProblemExam?student=${user.username}&examId=${exam.id}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+            const data = await res.json();
+            // Nếu isProblemExam = false => đã nộp
+            return !data?.result?.isProblemExam ? exam.id : null;
+          })
+        );
+
+        setProblemExams(results.filter((id) => id !== null) as number[]);
+      } catch (error) {
+        console.error("Error checking problem exams:", error);
+      }
+    };
+
+    fetchStatuses();
+  }
+}, [user, exams]);
+
   // Lấy danh sách bài thi (Level 1)
   useEffect(() => {
     if (isOpen && viewLevel === 1) {
@@ -194,7 +229,7 @@ export default function ExamReviewModal({ isOpen, onClose, classId, user }: Exam
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b bg-blue-500 text-white rounded-t-xl">
           <h2 className="text-lg font-semibold">
-            {viewLevel === 1 && "📚 Review Exams"}
+            {viewLevel === 1 && "Exams"}
             {viewLevel === 2 && `👨‍🎓 Students in "${selectedExam?.title}"`}
             {viewLevel === 3 && `📄 Answers of ${selectedStudent?.fullName}`}
           </h2>
@@ -227,33 +262,33 @@ export default function ExamReviewModal({ isOpen, onClose, classId, user }: Exam
               exams.map(exam => (
                 <button
                   key={exam.id}
-                  className={`w-full text-left border rounded-lg p-3 hover:shadow-md transition 
-                    ${user?.role === "TEACHER"
-                      ? "bg-gray-50 hover:bg-blue-50"
-                      : new Date().getTime() - new Date(exam.beginTime).getTime() > 6 * 60 * 60 * 1000
-                        ? "bg-red-100 cursor-not-allowed"
-                        : "bg-gray-50 hover:bg-blue-50"
-                    }`}
+                  className={`w-full text-left border rounded-lg p-3 transition ${
+                    user?.role === "STUDENT" &&
+                    new Date().getTime() - new Date(exam.beginTime).getTime() > 6 * 60 * 60 * 1000
+                      ? "bg-red-100 cursor-not-allowed"
+                      : problemExams.includes(exam.id)
+                      ? "bg-yellow-100 cursor-not-allowed"
+                      : "bg-gray-50 hover:bg-blue-50 hover:shadow-md"
+                  }`}
                   onClick={() => {
                     if (user?.role === "TEACHER") {
                       loadStudents(exam);
                     } else {
-                      const isExpired = new Date().getTime() - new Date(exam.beginTime).getTime() > 6 * 60 * 60 * 1000;
-                      if (!isExpired) {
-                        router.push(`/exam/${exam.id}`);
-                      }
+                      const isExpired =
+                        new Date().getTime() - new Date(exam.beginTime).getTime() >
+                        6 * 60 * 60 * 1000;
+                      if (isExpired || problemExams.includes(exam.id)) return; // Không cho click
+
+                      router.push(`/exam/${exam.id}`);
                     }
                   }}
                 >
-                  <h3 className="font-semibold text-blue-700">
-                    {exam.title}
-                    {user?.role !== "TEACHER" &&
-                      new Date().getTime() - new Date(exam.beginTime).getTime() > 6 * 60 * 60 * 1000 && (
-                        <span className="ml-2 text-red-600 text-sm">(Hết hạn làm bài)</span>
-                      )}
-                  </h3>
+                  <h3 className="font-semibold text-blue-700">{exam.title}</h3>
                   <p className="text-sm text-gray-600">📅 {new Date(exam.beginTime).toLocaleString()}</p>
                   <p className="text-sm text-gray-600">📝 {exam.numberOfQuestion} questions</p>
+                  {problemExams.includes(exam.id) && (
+                    <p className="text-sm font-semibold text-yellow-700">✅ Đã nộp</p>
+                  )}
                 </button>
               ))
             )
