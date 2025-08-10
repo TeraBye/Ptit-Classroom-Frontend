@@ -1,45 +1,35 @@
 import React from "react";
+import SubjectCard from "./SubjectCard";
 
 interface Subject {
-  id?: number;
+  id: number;
   name: string;
 }
 
 interface SubjectListProps {
   subjects: Subject[];
-  onSelect: (subjectId: number) => void;
-  onAddQuestion: (subjectId: number) => void;
+  onSelect: (subjectId: number, subjectName: string) => void;
+  selectedSubjectId: number | null;
 }
 
-const SubjectList: React.FC<SubjectListProps> = ({ subjects, onSelect, onAddQuestion }) => {
+export default function SubjectList({
+  subjects,
+  onSelect,
+  selectedSubjectId,
+}: SubjectListProps) {
   return (
-    <ul className="space-y-3">
-      {subjects.length === 0 && <li>There are no subjects.</li>}
-      {subjects.map(subject => (
-        <li key={subject.id} className="flex items-center justify-between">
-          <span>{subject.name}</span>
-          <div className="flex gap-2">
-            {typeof subject.id === 'number' && (
-              <>
-                <button
-                  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  onClick={() => onSelect(subject.id as number)}
-                >
-                  View questions
-                </button>
-                <button
-                  className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                  onClick={() => onAddQuestion(subject.id as number)}
-                >
-                  Add question
-                </button>
-              </>
-            )}
-          </div>
-        </li>
+    <div className="space-y-2">
+      {subjects.map((subject) => (
+        <div
+          key={subject.id}
+          onClick={() => onSelect(subject.id, subject.name)}
+          className={`p-3 border rounded-lg cursor-pointer ${
+            selectedSubjectId === subject.id ? "bg-yellow-300" : "bg-white"
+          }`}
+        >
+          {subject.name}
+        </div>
       ))}
-    </ul>
+    </div>
   );
-};
-
-export default SubjectList; 
+}
