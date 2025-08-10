@@ -10,6 +10,7 @@ import { SubmitModal } from "@/components/Home/ClassInside/SubmitModal";
 import { Client, Storage, ID } from "appwrite";
 import { format } from "date-fns";
 import { API_BASE_URL, getMyInfo } from "@/app/api/libApi/api";
+import { useRouter } from "next/navigation"; 
 import { SubmissionListModal } from "./SubmissionListModal";
 import axiosInstance from "@/utils/axiosInstance";
 
@@ -22,6 +23,7 @@ interface PostProps {
   content: string;
   fileUrl: string;
   assignmentId: number;
+  username: string;
 }
 
 const getDaysLeft = (deadline: string) => {
@@ -66,6 +68,7 @@ export function CenterContent({
   content,
   fileUrl,
   assignmentId,
+  username,
 }: PostProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -130,6 +133,69 @@ export function CenterContent({
     setShowSubmissions(true);
   };
 
+  const router = useRouter(); // dùng để điều hướng
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const userData = await getMyInfo(token);
+        setUser(userData);
+      } catch (error) {
+        console.error("Error ", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Hàm mở tin nhắn
+  const handleOpenMessage = async () => {
+    if (!user?.username) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:8888/api/chat/conversation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+           Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          senderUsername: user.username,
+          receiverUsername: username,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Không thể tạo cuộc trò chuyện");
+      }
+
+      router.push(`/chat?receiverUsername=${encodeURIComponent(username)}`);
+
+    } catch (err) {
+      console.error("Lỗi khi mở tin nhắn:", err);
+    }
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const userData = await getMyInfo(token);
+        setUser(userData);
+      } catch (error) {
+        console.error("Error ", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+  
   const mockComments: CommentProps[] = [
     {
       avatar:
@@ -191,7 +257,9 @@ export function CenterContent({
                 onClick={handleViewSubmissions}
               />
             )}
-            <Mail className="text-red-500 cursor-pointer hover:text-red-600" />
+            <Mail className="text-red-500 cursor-pointer hover:text-red-600" 
+              onClick={() => handleOpenMessage()}
+            />
           </div>
           {showSubmissions && (
             <SubmissionListModal

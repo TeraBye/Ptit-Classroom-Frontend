@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/untils";
 import { useParams } from "next/navigation";
 import { getMyInfo } from "@/app/api/libApi/api";
+
 const letterMap = ["A", "B", "C", "D", "E", "F"];
 
 const formatTime = (seconds: number) => {
@@ -25,28 +26,32 @@ export default function Quiz() {
   const [examSubmissionId, setExamSubmissionId] = useState<number | null>(null);
   const [showResultModal, setShowResultModal] = useState(false);
   const [resultData, setResultData] = useState<any>(null);
+  const [duration, setDuration] = useState<number>(15);
+  const [isSubmitted, setIsSubmitted] = useState(false); // ✅ Thêm biến để chặn timer sau khi nộp
 
   const params = useParams();
   const examId = params.examId;
 
   const [user, setUser] = useState<any>(null);
-  
-  useEffect(() => {
-      const fetchData = async () => {
-        try {
-          const token = localStorage.getItem("token");
-          if (!token) return;
-  
-          const userData = await getMyInfo(token);
-          setUser(userData);
-        } catch (error) {
-          console.error("Error ", error);
-        }
-      };
-  
-      fetchData();
-    }, []);
 
+  // Lấy thông tin user
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const userData = await getMyInfo(token);
+        setUser(userData);
+      } catch (error) {
+        console.error("Error ", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Lấy đề và câu trả lời đã lưu
   useEffect(() => {
     if (!user) return;
     const fetchQuestions = async () => {
@@ -61,7 +66,6 @@ export default function Quiz() {
         );
         const data = await res.json();
 
-        // Tạo mảng câu hỏi
         const q = data.result.answers.map((item: any) => ({
           id: item.questionId,
           question: item.content,
@@ -73,12 +77,11 @@ export default function Quiz() {
         setAnswers(q.map((item: any) => item.selectedOption || null));
         setExamSubmissionId(data.result.examSubmission.id);
 
-        // ✅ Tính thời gian còn lại
-        const durationMinutes = data.result.examSubmission.duration || 15; // phút
-        const examTimeSeconds = data.result.examSubmission.examTime || 0; // giây đã làm
+        const durationMinutes = data.result.examSubmission.duration || 15;
+        setDuration(durationMinutes);
+        const examTimeSeconds = data.result.examSubmission.examTime || 0;
         const calculatedTimeLeft = durationMinutes * 60 - examTimeSeconds;
         setTimeLeft(Math.max(calculatedTimeLeft, 0));
-
       } catch (error) {
         console.error("Error fetching questions:", error);
       } finally {
@@ -89,9 +92,9 @@ export default function Quiz() {
     fetchQuestions();
   }, [user, examId]);
 
-
+  // Chạy đếm ngược
   useEffect(() => {
-    if (loading || questions.length === 0) return;
+    if (loading || questions.length === 0 || isSubmitted) return; // ✅ Chặn timer nếu đã nộp bài
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
@@ -105,10 +108,12 @@ export default function Quiz() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [loading, questions.length]);
+  }, [loading, questions.length, isSubmitted]);
 
   const updateAnswerToServer = async (questionId: number, selectedOption: string | null) => {
     if (!selectedOption || !examSubmissionId) return;
+    const durationInSeconds = duration * 60 || 0;
+    const examTime = durationInSeconds - timeLeft;
 
     try {
       await fetch("http://localhost:8888/api/exam/updateAnswer", {
@@ -121,6 +126,7 @@ export default function Quiz() {
           examSubmissionId,
           questionId,
           selectedOption,
+          examTime,
         }),
       });
     } catch (error) {
@@ -142,6 +148,7 @@ export default function Quiz() {
       const data = await res.json();
       setResultData(data.result);
       setShowResultModal(true);
+      setIsSubmitted(true); // ✅ Đánh dấu đã nộp
     } catch (error) {
       console.error("Lỗi khi cập nhật bài thi:", error);
     }
@@ -275,19 +282,15 @@ export default function Quiz() {
       {showResultModal && resultData && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl text-center animate-fade-in">
-            <h2 className="text-2xl font-bold text-green-600 mb-4">🎉 Hoàn thành bài thi!</h2>
-            <p className="text-lg mb-2">✅ Điểm số: <strong>{resultData.score}</strong></p>
+            <h2 className="text-2xl font-bold text-green-600 mb-4"> Hoàn thành bài thi!</h2>
+            <p className="text-lg mb-2">Điểm số: <strong>{resultData.score}</strong></p>
             <p className="mb-1">
-              🎯 Số câu đúng: <strong>{resultData.numberOfCorrectAnswers}/{questions.length}</strong>
+              Số câu đúng: <strong>{resultData.numberOfCorrectAnswers}/{questions.length}</strong>
             </p>
             <p className="mb-1">
               ⏱️ Thời gian làm bài:{" "}
               <strong>
-                {Math.floor(
-                  (new Date(resultData.submittedAt).getTime() -
-                    new Date(resultData.startedAt).getTime()) /
-                    60000
-                )} phút
+                {`${Math.floor(resultData.examTime / 60)} phút ${resultData.examTime % 60} giây`}
               </strong>
             </p>
             <p className="mb-4">
