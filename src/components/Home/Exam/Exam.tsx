@@ -19,7 +19,7 @@ export default function Quiz() {
   >([]);
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<(string | null)[]>([]);
-  const [timeLeft, setTimeLeft] = useState(15 * 60);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [loading, setLoading] = useState(true);
   const [examSubmissionId, setExamSubmissionId] = useState<number | null>(null);
@@ -30,29 +30,29 @@ export default function Quiz() {
   const examId = params.examId;
 
   const [user, setUser] = useState<any>(null);
-  
-  useEffect(() => {
-      const fetchData = async () => {
-        try {
-          const token = localStorage.getItem("token");
-          if (!token) return;
-  
-          const userData = await getMyInfo(token);
-          setUser(userData);
-        } catch (error) {
-          console.error("Error ", error);
-        }
-      };
-  
-      fetchData();
-    }, []);
 
   useEffect(() => {
-     if (!user) return;
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const userData = await getMyInfo(token);
+        setUser(userData);
+      } catch (error) {
+        console.error("Error ", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
     const fetchQuestions = async () => {
       try {
         const res = await fetch(
-          `http://localhost:8888/api/exam/getExamSubmission?student=${user.username}&examId=${examId}`,
+          `http://localhost:8888/api/exam/getStudentAnswer?student=${user.username}&examId=${examId}`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -60,14 +60,30 @@ export default function Quiz() {
           }
         );
         const data = await res.json();
-        const q = data.result.questionResponses.map((item: any) => ({
-          id: item.id,
+
+        const q = data.result.answers.map((item: any) => ({
+          id: item.questionId,
           question: item.content,
           options: [item.optionA, item.optionB, item.optionC, item.optionD],
         }));
         setQuestions(q);
-        setAnswers(Array(q.length).fill(null));
+
+        // Gán đáp án từ API
+        const initAnswers = data.result.answers.map((item: any) =>
+          item.selectedOption ? item.selectedOption : null
+        );
+        setAnswers(initAnswers);
+
         setExamSubmissionId(data.result.examSubmission.id);
+
+        // Tính thời gian còn lại
+        const examTime = data.result.exam.exam_time ?? 15 * 60; // giây
+        const startedAt = new Date(data.result.examSubmission.startedAt).getTime();
+        const now = new Date().getTime();
+        const elapsedSeconds = Math.floor((now - startedAt) / 1000);
+        const remaining = examTime - elapsedSeconds;
+        setTimeLeft(remaining > 0 ? remaining : 0);
+
       } catch (error) {
         console.error("Error fetching questions:", error);
       } finally {
@@ -264,7 +280,9 @@ export default function Quiz() {
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl text-center animate-fade-in">
             <h2 className="text-2xl font-bold text-green-600 mb-4">🎉 Hoàn thành bài thi!</h2>
-            <p className="text-lg mb-2">✅ Điểm số: <strong>{resultData.score}</strong></p>
+            <p className="text-lg mb-2">
+              ✅ Điểm số: <strong>{resultData.score}</strong>
+            </p>
             <p className="mb-1">
               🎯 Số câu đúng: <strong>{resultData.numberOfCorrectAnswers}/{questions.length}</strong>
             </p>
@@ -273,9 +291,8 @@ export default function Quiz() {
               <strong>
                 {Math.floor(
                   (new Date(resultData.submittedAt).getTime() -
-                    new Date(resultData.startedAt).getTime()) /
-                    60000
-                )} phút
+                    new Date(resultData.startedAt).getTime()) / 1000
+                )} giây
               </strong>
             </p>
             <p className="mb-4">
