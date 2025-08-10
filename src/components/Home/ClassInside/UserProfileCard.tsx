@@ -11,7 +11,7 @@ import SockJS from "sockjs-client";
 
 interface Post {
   postId: number;
-  assignmnetId: number;
+  assignmentId: number;
   avatar: string;
   fullName: string;
   createdAt: string;
@@ -85,6 +85,7 @@ export default function UserProfileCard() {
     <div className="flex-1 overflow-y-auto flex flex-col gap-4">
       {posts.length > 0 ? (
         posts.map((post) => (
+          console.log("post", post),
           <CenterContent
             key={post.postId}
             avatar={post.avatar}

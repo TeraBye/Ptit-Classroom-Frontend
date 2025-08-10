@@ -9,8 +9,10 @@ import { CommentModal } from "@/components/Home/ClassInside/CommentModal";
 import { SubmitModal } from "@/components/Home/ClassInside/SubmitModal";
 import { Client, Storage, ID } from "appwrite";
 import { format } from "date-fns";
-import { getMyInfo } from "@/app/api/libApi/api";
+import { API_BASE_URL, getMyInfo } from "@/app/api/libApi/api";
 import { useRouter } from "next/navigation"; 
+import { SubmissionListModal } from "./SubmissionListModal";
+import axiosInstance from "@/utils/axiosInstance";
 
 interface PostProps {
   avatar: string;
@@ -72,6 +74,9 @@ export function CenterContent({
   const [showComments, setShowComments] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [showSubmissions, setShowSubmissions] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -89,7 +94,14 @@ export function CenterContent({
     fetchData();
   }, []);
 
+  const handleSubmissionClick = async () => {
+    const res = await axiosInstance.get(`${API_BASE_URL}/assignments/${assignmentId}/check-submitted?studentUsername=${user?.username}`);
+    setAlreadySubmitted(res.data.result);
+    setShowSubmitModal(true)
+  }
+
   const handleSubmission = async (note: string, file: File | null) => {
+
     try {
       let fileUrl = "";
       if (file) {
@@ -97,7 +109,7 @@ export function CenterContent({
       }
 
       const token = localStorage.getItem("token");
-      await fetch(`http://localhost:8888/api/assignments/submit`, {
+      await fetch(`${API_BASE_URL}/assignments/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -118,8 +130,7 @@ export function CenterContent({
   };
 
   const handleViewSubmissions = () => {
-    // TODO: Implement view submissions for teachers
-    console.log("View submissions");
+    setShowSubmissions(true);
   };
 
   const router = useRouter(); // dùng để điều hướng
@@ -169,6 +180,22 @@ export function CenterContent({
     }
   };
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const userData = await getMyInfo(token);
+        setUser(userData);
+      } catch (error) {
+        console.error("Error ", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+  
   const mockComments: CommentProps[] = [
     {
       avatar:
@@ -219,10 +246,10 @@ export function CenterContent({
             </div>
           </div>
           <div className="flex gap-3">
-            {user?.role === "student" ? (
+            {user?.role === "STUDENT" ? (
               <Upload
                 className="text-green-500 cursor-pointer hover:text-green-600"
-                onClick={() => setShowSubmitModal(true)}
+                onClick={handleSubmissionClick}
               />
             ) : (
               <ClipboardList
@@ -234,6 +261,12 @@ export function CenterContent({
               onClick={() => handleOpenMessage()}
             />
           </div>
+          {showSubmissions && (
+            <SubmissionListModal
+              assignmentId={assignmentId}
+              onClose={() => setShowSubmissions(false)}
+            />
+          )}
         </div>
 
         <h4 className="font-semibold text-lg">{title}</h4>
@@ -318,6 +351,7 @@ export function CenterContent({
         <SubmitModal
           onClose={() => setShowSubmitModal(false)}
           onSubmit={handleSubmission}
+          disabled={alreadySubmitted}
         />
       )}
     </Card>

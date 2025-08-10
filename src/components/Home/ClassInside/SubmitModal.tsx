@@ -8,9 +8,10 @@ import { Textarea } from '@/components/ui/textarea';
 interface SubmitModalProps {
   onClose: () => void;
   onSubmit: (note: string, file: File | null) => void;
+  disabled?: boolean;
 }
 
-export function SubmitModal({ onClose, onSubmit }: SubmitModalProps) {
+export function SubmitModal({ onClose, onSubmit, disabled=false }: SubmitModalProps) {
   const [note, setNote] = useState('');
   const [file, setFile] = useState<File | null>(null);
 
@@ -28,31 +29,31 @@ export function SubmitModal({ onClose, onSubmit }: SubmitModalProps) {
           <X size={24} />
         </button>
 
-        <h2 className="text-xl font-semibold mb-4">Nộp bài tập</h2>
+        <h2 className="text-xl font-semibold mb-4">Submit assignment</h2>
 
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ghi chú
+              Note
             </label>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Nhập ghi chú của bạn..."
+              placeholder="Enter your notes..."
               className="w-full"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              File đính kèm
+              Attached file
             </label>
             <div className="flex items-center justify-center w-full">
               <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
                   <Upload className="w-8 h-8 mb-2 text-gray-500" />
                   <p className="mb-2 text-sm text-gray-500">
-                    {file ? file.name : 'Kéo thả file hoặc click để tải lên'}
+                    {file ? file.name : 'Drag and drop files or click to upload'}
                   </p>
                 </div>
                 <input
@@ -66,10 +67,10 @@ export function SubmitModal({ onClose, onSubmit }: SubmitModalProps) {
 
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={onClose}>
-              Hủy
+              Cancel
             </Button>
-            <Button onClick={handleSubmit}>
-              Nộp bài
+            <Button onClick={handleSubmit} disabled={disabled}>
+              {disabled ? "Submitted" : "Submit"}
             </Button>
           </div>
         </div>
