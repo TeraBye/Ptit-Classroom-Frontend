@@ -51,7 +51,7 @@ const Item = ({ classroom }: { classroom: any }) => {
           </div>
           <button
             className="w-[100px] py-2 border border-blue-500 text-blue-500 rounded hover:bg-blue-50"
-            onClick={() => router.push(`/class-inside`)}
+            onClick={() => router.push(`/class-inside/`+classroom.id)}
           >
             Join
           </button>

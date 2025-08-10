@@ -3,11 +3,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { HeaderItem } from "../../../../types/menu";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 const HeaderLink: React.FC<{ item: HeaderItem }> = ({ item }) => {
   const [submenuOpen, setSubmenuOpen] = useState(false);
   const path = usePathname(); // Get the current path from Next.js router
   const [isActive, setIsActive] = useState(false);
+  const router = useRouter();
 
   // Check if the current path matches the link or any submenu link
   useEffect(() => {
@@ -31,32 +33,40 @@ const HeaderLink: React.FC<{ item: HeaderItem }> = ({ item }) => {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <Link
-        href={`/${item.href}`}
-        className={`text-lg flex hover:text-black capitalized relative ${isActive
-            ? "text-black after:absolute after:w-8 after:h-1 after:bg-primary after:rounded-full after:-bottom-1"
-            : "text-grey"
-          }`}
+      <div className="flex items-center">
+    <Link
+      href={`/${item.href}`}
+      className={`text-lg flex hover:text-black capitalized relative ${
+        isActive
+          ? "text-black after:absolute after:w-8 after:h-1 after:bg-primary after:rounded-full after:-bottom-1"
+          : "text-grey"
+      }`}
+    >
+      {item.label}
+    </Link>
+
+    {item.submenu && (
+      <svg
+        role="button"
+        style={{ cursor: "pointer", zIndex: 10, pointerEvents: "auto" }}
+        xmlns="http://www.w3.org/2000/svg"
+        width="1.5em"
+        height="1.5em"
+        viewBox="0 0 24 24"
+        onClick={() => router.push(`/chat`)}
       >
-        {item.label}
-        {item.submenu && (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="1.5em"
-            height="1.5em"
-            viewBox="0 0 24 24"
-          >
-            <path
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.5"
-              d="m7 10l5 5l5-5"
-            />
-          </svg>
-        )}
-      </Link>
+        <path
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.5"
+          d="m7 10l5 5l5-5"
+        />
+      </svg>
+    )}
+  </div>
+
 
       {submenuOpen && (
         <div

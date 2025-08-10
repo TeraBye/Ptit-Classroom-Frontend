@@ -5,6 +5,10 @@ import DatePicker from "react-datepicker";
 import { format } from "date-fns";
 import "react-datepicker/dist/react-datepicker.css";
 import { Client, Storage, ID } from "appwrite";
+import { getMyInfo } from "@/app/api/libApi/api";
+import { Card } from "@/components/ui/card";
+import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 // --- Appwrite config
 const client = new Client();
@@ -18,12 +22,34 @@ export function AssignmentModal({ isOpen, onClose }: { isOpen: boolean; onClose:
   const [files, setFiles] = useState<File[]>([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [user, setUser] = useState<any>(null);
+
+  const router = useRouter();
+  const params = useParams();
+  const classId = params.classId;
+
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
   }, [onClose]);
+
+  useEffect(() => {
+      const fetchData = async () => {
+        try {
+          const token = localStorage.getItem("token");
+          if (!token) return;
+  
+          const userData = await getMyInfo(token);
+          setUser(userData);
+        } catch (error) {
+          console.error("Error ", error);
+        }
+      };
+  
+      fetchData();
+    }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -61,10 +87,10 @@ export function AssignmentModal({ isOpen, onClose }: { isOpen: boolean; onClose:
         body: JSON.stringify({
           title,
           content,
-          username: "teacher001",
+          username: user?.username,
           deadline: formattedDeadline,
           fileUrl: fileUrl || "",
-          classId: "1",
+          classId: classId,
         }),
       });
 

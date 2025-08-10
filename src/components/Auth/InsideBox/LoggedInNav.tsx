@@ -24,9 +24,7 @@ export default function LoggedInNav() {
   const [isLoading, setIsLoading] = useState(false);
   const { setIsAuthenticated } = useAuth();
   const [token, setToken] = useState<string | undefined>(undefined);
-  const [user, setUser] = useState<{ username: string; role: string } | null>(
-    null
-  );
+  const [user, setUser] = useState<any>(null);
 
   const router = useRouter();
 
@@ -79,7 +77,8 @@ export default function LoggedInNav() {
         <Grid className="text-black" size={20} />
       </button>
 
-      <button className="p-2 rounded-full hover:bg-gray-200">
+      <button className="p-2 rounded-full hover:bg-gray-200" 
+      onClick={() => router.push("/chat")}>
         <MessageSquare className="text-black" size={20} />
       </button>
 
@@ -93,7 +92,7 @@ export default function LoggedInNav() {
           className="rounded-full overflow-hidden w-9 h-9 border border-gray-400"
         >
           <Image
-            src="https://i.pinimg.com/736x/54/a0/02/54a0026d53823a3556d7b333da079389.jpg"
+            src={user?.avatar || "https://i.pinimg.com/736x/54/a0/02/54a0026d53823a3556d7b333da079389.jpg"}
             alt="Avatar"
             width={36}
             height={36}
@@ -106,7 +105,7 @@ export default function LoggedInNav() {
             <div className="p-4 border-b">
               <div className="flex items-center gap-3">
                 <Image
-                  src="https://i.pinimg.com/736x/54/a0/02/54a0026d53823a3556d7b333da079389.jpg"
+                  src= {user?.avatar || "https://i.pinimg.com/736x/54/a0/02/54a0026d53823a3556d7b333da079389.jpg"}
                   alt="Avatar"
                   width={40}
                   height={40}
