@@ -19,6 +19,7 @@ interface Post {
   deadline: string;
   content: string;
   fileUrl: string;
+  username: string;
 }
 
 export default function UserProfileCard() {
@@ -94,6 +95,7 @@ export default function UserProfileCard() {
             content={post.content}
             fileUrl={post.fileUrl}
             assignmentId={post.assignmnetId}
+            username={post.username} 
           />
         ))
       ) : (
