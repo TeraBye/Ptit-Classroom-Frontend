@@ -117,7 +117,8 @@ export default function LoggedInNav() {
                   <p className="text-gray-500 text-xs">{user?.username}</p>
                 </div>
               </div>
-              <button className="mt-3 w-full py-2 bg-gray-100 rounded text-center hover:bg-gray-200">
+              <button className="mt-3 w-full py-2 bg-gray-100 rounded text-center hover:bg-gray-200"
+              onClick={()=>router.push(`/profile/${user?.username}`)}>
                 View profile
               </button>
             </div>
