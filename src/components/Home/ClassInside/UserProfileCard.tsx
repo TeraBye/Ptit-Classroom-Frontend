@@ -88,6 +88,7 @@ export default function UserProfileCard() {
           console.log("post", post),
           <CenterContent
             key={post.postId}
+            postId={post.postId}
             avatar={post.avatar}
             fullName={post.fullName}
             createdAt={post.createdAt}

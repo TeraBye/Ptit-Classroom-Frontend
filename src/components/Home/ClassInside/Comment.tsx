@@ -8,7 +8,9 @@ export interface CommentProps {
   username: string;
   content: string;
   createdAt: string;
+  fullName: string;
   replies?: CommentProps[];
+  
 }
 
 const getTimeAgo = (createdAt: string) => {
@@ -32,6 +34,7 @@ export const Comment = ({
   content,
   createdAt,
   replies,
+  fullName,
 }: CommentProps) => {
   const [showReplies, setShowReplies] = useState(false);
   const [replyText, setReplyText] = useState("");
@@ -50,7 +53,7 @@ export const Comment = ({
         </div>
         <div className="flex-1">
           <div className="flex justify-between">
-            <p className="font-semibold text-sm">{username}</p>
+            <p className="font-semibold text-sm">{fullName}</p>
             <p className="text-xs text-gray-500">{getTimeAgo(createdAt)}</p>
           </div>
           <p className="text-gray-700 text-sm mt-1">{content}</p>
