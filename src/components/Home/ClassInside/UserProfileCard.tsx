@@ -95,7 +95,7 @@ export default function UserProfileCard() {
             deadline={post.deadline}
             content={post.content}
             fileUrl={post.fileUrl}
-            assignmentId={post.assignmnetId}
+            assignmentId={post.assignmentId}
             username={post.username} 
           />
         ))

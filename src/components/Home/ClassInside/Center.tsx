@@ -10,9 +10,10 @@ import { SubmitModal } from "@/components/Home/ClassInside/SubmitModal";
 import { Client, Storage, ID } from "appwrite";
 import { format } from "date-fns";
 import { API_BASE_URL, getMyInfo } from "@/app/api/libApi/api";
-import { useRouter } from "next/navigation"; 
+import { useParams, useRouter } from "next/navigation";
 import { SubmissionListModal } from "./SubmissionListModal";
 import axiosInstance from "@/utils/axiosInstance";
+import StudentListModal from "./StudentListModal";
 
 interface PostProps {
   avatar: string;
@@ -76,6 +77,9 @@ export function CenterContent({
   const [user, setUser] = useState<any>(null);
   const [showSubmissions, setShowSubmissions] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [showStudentList, setShowStudentList] = useState(false);
+
+  const {classId} = useParams<{classId: string}>();
 
 
   useEffect(() => {
@@ -161,7 +165,7 @@ export function CenterContent({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-           Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           senderUsername: user.username,
@@ -195,7 +199,7 @@ export function CenterContent({
 
     fetchData();
   }, []);
-  
+
   const mockComments: CommentProps[] = [
     {
       avatar:
@@ -257,14 +261,28 @@ export function CenterContent({
                 onClick={handleViewSubmissions}
               />
             )}
-            <Mail className="text-red-500 cursor-pointer hover:text-red-600" 
+            <Mail className="text-red-500 cursor-pointer hover:text-red-600"
               onClick={() => handleOpenMessage()}
             />
+            {/* Nút mở danh sách sinh viên */}
+            <button
+              className="px-2 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300"
+              onClick={() => setShowStudentList(true)}
+            >
+              Danh sách sinh viên
+            </button>
           </div>
           {showSubmissions && (
             <SubmissionListModal
               assignmentId={assignmentId}
               onClose={() => setShowSubmissions(false)}
+            />
+          )}
+          {showStudentList && (
+            <StudentListModal
+              open={showStudentList}
+              onClose={() => setShowStudentList(false)}
+              classroomId={Number(classId)} // Nếu bạn có classroomId riêng, hãy thay bằng biến đó
             />
           )}
         </div>

@@ -219,7 +219,7 @@ const Classroom = () => {
         <div className="w-1/3 bg-white p-4 overflow-y-auto border-r">
           <h2 className="text-lg font-semibold mb-4">Class</h2>
           {/* Luôn render section[0] */}
-          <div className="mb-6">
+          {user?.role === "STUDENT" && (<div className="mb-6">
             <div className="flex justify-between items-center mb-2">
               <h3 className="font-semibold">{sections[0].title}</h3>
               <button className="text-gray-400 hover:text-gray-600">▼</button>
@@ -245,7 +245,7 @@ const Classroom = () => {
                 Search classroom
               </button>
             </div>
-          </div>
+          </div>)}
 
           {/* Chỉ render section[1] và nút tạo lớp nếu là TEACHER */}
           {user?.role === "TEACHER" && (
