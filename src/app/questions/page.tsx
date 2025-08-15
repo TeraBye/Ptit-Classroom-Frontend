@@ -1,4 +1,4 @@
-"use client";
+"use client"
 import React, { useState, useEffect } from "react";
 import SubjectList from "@/components/Questions/SubjectList";
 import QuestionList from "@/components/Questions/QuestionList";
@@ -14,7 +14,7 @@ export default function Page() {
   const [questions, setQuestions] = useState<any[]>([]);
   const [editingQuestion, setEditingQuestion] = useState<any | null>(null);
   const [username, setUsername] = useState<string>("");
-  const [showQuestions, setShowQuestions] = useState<boolean>(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   const refreshQuestions = async () => {
@@ -23,15 +23,13 @@ export default function Page() {
       setQuestions(res.data.result);
     }
   };
-  
+
   const { canUndo, canRedo, undo, redo, refreshStates } = useUndoRedoWithBackend(username, refreshQuestions);
-  
-  // Lấy username khi mount
+
   useEffect(() => {
     const fetchUserInfo = async () => {
       const token = localStorage.getItem("token");
       if (!token) return;
-
       try {
         const res = await getMyInfo(token);
         setUsername(res.username);
@@ -42,7 +40,6 @@ export default function Page() {
     fetchUserInfo();
   }, []);
 
-  // Lấy danh sách môn học
   useEffect(() => {
     axiosInstance
       .get("/classrooms/subjects")
@@ -59,9 +56,8 @@ export default function Page() {
       .catch((err) => console.error("Failed to fetch questions", err));
   };
 
-  const handleCreateOrUpdateQuestion = async (data: any): Promise<void> => {
+  const handleCreateOrUpdateQuestion = async (data: any) => {
     if (!selectedSubject) return;
-
     if (editingQuestion) {
       const res = await axiosInstance.put(`/questions/${editingQuestion.id}`, {
         ...data,
@@ -80,36 +76,32 @@ export default function Page() {
       });
       setQuestions((prev) => [...prev, res.data.result]);
     }
-
-    await refreshStates(); // cập nhật Undo/Redo
+    await refreshStates();
   };
 
   const handleEditQuestion = (id: number) => {
     const question = questions.find((q) => q.id === id);
     if (question) setEditingQuestion(question);
+    setIsModalOpen(false); // đóng modal khi edit
   };
 
-  const handleCancelEdit = () => {
-    setEditingQuestion(null);
-  };
-
-  const handleDeleteQuestion = async (questionId: number) => {
+  const handleDeleteQuestion = async (id: number) => {
     if (!username) return;
-    await axiosInstance.delete(`/questions/${username}/${questionId}/delete`);
-    setQuestions((prev) => prev.filter((q) => q.id !== questionId));
-    await refreshStates(); // cập nhật Undo/Redo
+    await axiosInstance.delete(`/questions/${username}/${id}/delete`);
+    setQuestions((prev) => prev.filter((q) => q.id !== id));
+    await refreshStates();
   };
 
   const filteredQuestions = questions.filter((q) => {
     const term = searchTerm.toLowerCase();
     return (
-      (q.content?.toLowerCase() || "").includes(term) ||
-      (q.optionA?.toLowerCase() || "").includes(term) ||
-      (q.optionB?.toLowerCase() || "").includes(term) ||
-      (q.optionC?.toLowerCase() || "").includes(term) ||
-      (q.optionD?.toLowerCase() || "").includes(term) ||
-      (q.correctAnswer?.toLowerCase() || "").includes(term) ||
-      (q.explanation?.toLowerCase() || "").includes(term)
+      q.content?.toLowerCase().includes(term) ||
+      q.optionA?.toLowerCase().includes(term) ||
+      q.optionB?.toLowerCase().includes(term) ||
+      q.optionC?.toLowerCase().includes(term) ||
+      q.optionD?.toLowerCase().includes(term) ||
+      q.correctAnswer?.toLowerCase().includes(term) ||
+      q.explanation?.toLowerCase().includes(term)
     );
   });
 
@@ -117,7 +109,6 @@ export default function Page() {
     <div className="p-6 bg-gray-100 min-h-screen mt-24">
       <h1 className="text-2xl font-bold mb-6">Question Management</h1>
       <div className="grid grid-cols-12 gap-6">
-        {/* Danh sách môn học */}
         <div className="col-span-3">
           <h2 className="text-lg font-semibold mb-3">Subjects</h2>
           <SubjectList
@@ -127,55 +118,30 @@ export default function Page() {
           />
         </div>
 
-        {/* Câu hỏi */}
         <div className="col-span-9 space-y-6">
           {selectedSubject ? (
             <>
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <h2 className="text-lg font-semibold">
-                    Questions for Subject: {selectedSubjectName}
-                  </h2>
-                  <button
-                    onClick={() => setShowQuestions(!showQuestions)}
-                    className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg"
-                  >
-                    {showQuestions ? "Hide Questions" : "Show Questions"}
-                  </button>
-                </div>
-                {showQuestions && (
-                  <div className="max-h-96 overflow-y-auto border rounded-lg p-4 bg-white">
-                    <input
-                      type="text"
-                      placeholder="Search questions..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="mb-4 block w-full border rounded-lg p-2"
-                    />
-                    <QuestionList
-                      questions={filteredQuestions}
-                      onEdit={handleEditQuestion}
-                      onDelete={(id) => handleDeleteQuestion(id)}
-                    />
-                  </div>
-                )}
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-semibold">
+                  Questions for Subject: {selectedSubjectName}
+                </h2>
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg"
+                >
+                  Show Questions
+                </button>
               </div>
 
-              {/* Form thêm/sửa câu hỏi */}
-              <div>
-                <h2 className="text-lg font-semibold mb-3">
-                  {editingQuestion ? "Edit Question" : "Add New Question"}
-                </h2>
-                <QuestionForm
-                  initialData={editingQuestion || {}}
-                  onSubmit={handleCreateOrUpdateQuestion}
-                  onUndo={undo}
-                  onRedo={redo}
-                  canUndo={canUndo}
-                  canRedo={canRedo}
-                  onCancel={handleCancelEdit}
-                />
-              </div>
+              <QuestionForm
+                initialData={editingQuestion || {}}
+                onSubmit={handleCreateOrUpdateQuestion}
+                onUndo={undo}
+                onRedo={redo}
+                canUndo={canUndo}
+                canRedo={canRedo}
+                onCancel={() => setEditingQuestion(null)}
+              />
             </>
           ) : (
             <div className="text-gray-500 italic">
@@ -184,6 +150,30 @@ export default function Page() {
           )}
         </div>
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white w-3/4 max-h-[80vh] overflow-y-auto rounded-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Questions</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-black">✕</button>
+            </div>
+            <input
+              type="text"
+              placeholder="Search questions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="mb-4 block w-full border rounded-lg p-2"
+            />
+            <QuestionList
+              questions={filteredQuestions}
+              onEdit={handleEditQuestion}
+              onDelete={handleDeleteQuestion}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
