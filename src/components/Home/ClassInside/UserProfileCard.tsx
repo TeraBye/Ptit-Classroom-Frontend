@@ -88,6 +88,7 @@ export default function UserProfileCard() {
           console.log("post", post),
           <CenterContent
             key={post.postId}
+            postId={post.postId}
             avatar={post.avatar}
             fullName={post.fullName}
             createdAt={post.createdAt}
@@ -95,7 +96,7 @@ export default function UserProfileCard() {
             deadline={post.deadline}
             content={post.content}
             fileUrl={post.fileUrl}
-            assignmentId={post.assignmnetId}
+            assignmentId={post.assignmentId}
             username={post.username} 
           />
         ))

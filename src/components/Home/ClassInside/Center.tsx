@@ -4,17 +4,17 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MessageCircle, Upload, Mail, X, ClipboardList } from "lucide-react";
-import { Comment, CommentProps } from "@/components/Home/ClassInside/Comment";
+import { CommentProps } from "@/components/Home/ClassInside/Comment";
 import { CommentModal } from "@/components/Home/ClassInside/CommentModal";
 import { SubmitModal } from "@/components/Home/ClassInside/SubmitModal";
 import { Client, Storage, ID } from "appwrite";
-import { format } from "date-fns";
 import { API_BASE_URL, getMyInfo } from "@/app/api/libApi/api";
 import { useRouter } from "next/navigation"; 
 import { SubmissionListModal } from "./SubmissionListModal";
 import axiosInstance from "@/utils/axiosInstance";
 
 interface PostProps {
+  postId: number;
   avatar: string;
   fullName: string;
   createdAt: string;
@@ -60,6 +60,7 @@ const BUCKET_ID = "67f02a57000c66380420";
 const ProjectID = "67f02a3c00396aab7f01";
 
 export function CenterContent({
+  postId,
   avatar,
   fullName,
   createdAt,
@@ -76,7 +77,7 @@ export function CenterContent({
   const [user, setUser] = useState<any>(null);
   const [showSubmissions, setShowSubmissions] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
-
+  const [comments, setComments] = useState<CommentProps[]>([]); // comments từ API
 
   useEffect(() => {
     const fetchData = async () => {
@@ -101,7 +102,6 @@ export function CenterContent({
   }
 
   const handleSubmission = async (note: string, file: File | null) => {
-
     try {
       let fileUrl = "";
       if (file) {
@@ -133,23 +133,38 @@ export function CenterContent({
     setShowSubmissions(true);
   };
 
-  const router = useRouter(); // dùng để điều hướng
+  const router = useRouter();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
+  // API lấy comment thật
+  const fetchComments = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
 
-        const userData = await getMyInfo(token);
-        setUser(userData);
-      } catch (error) {
-        console.error("Error ", error);
-      }
-    };
+      const res = await fetch(`http://localhost:8888/api/post/comments/${postId}?page=0&size=5`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    fetchData();
-  }, []);
+      if (!res.ok) throw new Error("Không thể tải bình luận");
+
+      const data = await res.json();
+
+      const mapped = data.result.map((c: any) => ({
+        avatar: c.avatar,
+        username: c.username,
+        content: c.content,
+        createdAt: c.createdAt,
+        fullName: c.fullName,
+        replies: [], // Nếu API có trả replies thì map thêm
+      }));
+
+      setComments(mapped);
+    } catch (err) {
+      console.error("Lỗi khi tải bình luận:", err);
+    }
+  };
 
   // Hàm mở tin nhắn
   const handleOpenMessage = async () => {
@@ -179,48 +194,6 @@ export function CenterContent({
       console.error("Lỗi khi mở tin nhắn:", err);
     }
   };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
-        const userData = await getMyInfo(token);
-        setUser(userData);
-      } catch (error) {
-        console.error("Error ", error);
-      }
-    };
-
-    fetchData();
-  }, []);
-  
-  const mockComments: CommentProps[] = [
-    {
-      avatar:
-        "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
-      username: "student001",
-      content: "Thầy giảng rất dễ hiểu ạ!",
-      createdAt: new Date().toISOString(),
-      replies: [
-        {
-          avatar:
-            "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
-          username: "teacher001",
-          content: "Cảm ơn em nha!",
-          createdAt: new Date().toISOString(),
-        },
-      ],
-    },
-    {
-      avatar:
-        "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
-      username: "student002",
-      content: "Deadline hơi gấp thầy ơi.",
-      createdAt: new Date().toISOString(),
-    },
-  ];
 
   // Submit assignments
   const uploadFileToAppwrite = async (file: File) => {
@@ -305,12 +278,15 @@ export function CenterContent({
         <div className="flex justify-between items-center text-sm text-gray-500 pt-2 border-t">
           <button
             className="flex items-center gap-2 text-gray-600 hover:text-blue-500 transition"
-            onClick={() => setShowComments(true)}
+            onClick={() => {
+              fetchComments();
+              setShowComments(true);
+            }}
           >
             <MessageCircle size={20} />
             <span>Bình luận</span>
           </button>
-          <div>{mockComments.length} bình luận</div>
+          <div>{comments.length} bình luận</div>
         </div>
 
         <div className="mt-3">
@@ -342,10 +318,13 @@ export function CenterContent({
 
       {showComments && (
         <CommentModal
-          comments={mockComments}
+          comments={comments}
+          postId={postId} // ID bài post hiện tại
+          username={user.username} // username người đang đăng nhập
           onClose={() => setShowComments(false)}
         />
       )}
+
 
       {showSubmitModal && (
         <SubmitModal
