@@ -64,6 +64,7 @@ export default function LoggedInNav() {
       localStorage.removeItem("token");
       setIsAuthenticated(false);
       toast.success("Logged out successfully");
+      router.push("/")
     } catch (error) {
       toast.error("Logout error");
       console.error(error);

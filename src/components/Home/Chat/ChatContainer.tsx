@@ -6,6 +6,7 @@ import { Conversation } from "./Conversation";
 import { Search } from "lucide-react";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import { useSearchParams } from "next/navigation";
 
 interface ConversationType {
   conver_id: number;
@@ -26,6 +27,8 @@ export default function ChatContainer() {
     useState<ConversationType | null>(null);
   const [user, setUser] = useState<any>(null);
   const stompClientRef = useRef<Client | null>(null);
+  const searchParams = useSearchParams(); // lấy query params
+  const receiverUsernameParam = searchParams.get("receiverUsername");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,6 +42,18 @@ export default function ChatContainer() {
 
         const convoList = await getConversations(userData.username, token);
         setConversations(convoList);
+
+        if (receiverUsernameParam) {
+          const foundConvo = convoList.find(
+            (c: ConversationType) =>
+              c.senderUsername === receiverUsernameParam ||
+              c.receiverUsername === receiverUsernameParam
+          );
+          if (foundConvo) {
+            handleSelectConversation(foundConvo);
+          }
+        }
+
       } catch (error) {
         console.error("Error loading conversations:", error);
       } finally {
