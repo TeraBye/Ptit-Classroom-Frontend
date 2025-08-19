@@ -20,7 +20,7 @@ export default function ProfilePage() {
 
   const handleSave = async (updatedData: any) => {
     try {
-      await axiosInstance.post(`/profile/users/update`, updatedData);
+      await axiosInstance.put(`/profile/users/update-profile`, updatedData);
       setUserData(updatedData);
     } catch (error) {
       console.error(error);

@@ -153,8 +153,10 @@ export default function Page() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white w-3/4 max-h-[80vh] overflow-y-auto rounded-lg p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setIsModalOpen(false)}>
+          <div className="bg-white w-3/4 max-h-[80vh] overflow-y-auto rounded-lg p-6"
+            onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">Questions</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-black">✕</button>

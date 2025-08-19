@@ -78,6 +78,7 @@ export function CenterContent({
   const [user, setUser] = useState<any>(null);
   const [showSubmissions, setShowSubmissions] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [submittedData, setSubmittedData] = useState<any>(null);
   const [comments, setComments] = useState<CommentProps[]>([]); // comments từ API
   const [showStudentList, setShowStudentList] = useState(false);
 
@@ -101,9 +102,22 @@ export function CenterContent({
   }, []);
 
   const handleSubmissionClick = async () => {
-    const res = await axiosInstance.get(`${API_BASE_URL}/assignments/${assignmentId}/check-submitted?studentUsername=${user?.username}`);
-    setAlreadySubmitted(res.data.result);
-    setShowSubmitModal(true)
+    try {
+      const res = await axiosInstance.get(`${API_BASE_URL}/assignments/${assignmentId}/get-submission?studentUsername=${user?.username}`);
+      console.log("submission data", res.data.result)
+      if (res.data.result && res.data.result.id) {
+        setAlreadySubmitted(true);
+        setSubmittedData(res.data.result);
+      } else {
+        setAlreadySubmitted(false);
+        setSubmittedData(null);
+      }
+      setShowSubmitModal(true);
+    } catch (err) {
+      setAlreadySubmitted(false);
+      setSubmittedData(null);
+      setShowSubmitModal(true);
+    }
   }
 
   const handleSubmission = async (note: string, file: File | null) => {
@@ -216,32 +230,6 @@ export function CenterContent({
     fetchData();
   }, []);
   
-  const mockComments: CommentProps[] = [
-    {
-      avatar:
-        "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
-      username: "student001",
-      content: "Thầy giảng rất dễ hiểu ạ!",
-      createdAt: new Date().toISOString(),
-      replies: [
-        {
-          avatar:
-            "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
-          username: "teacher001",
-          content: "Cảm ơn em nha!",
-          createdAt: new Date().toISOString(),
-        },
-      ],
-    },
-    {
-      avatar:
-        "https://i.pinimg.com/736x/6e/59/95/6e599501252c23bcf02658617b29c894.jpg",
-      username: "student002",
-      content: "Deadline hơi gấp thầy ơi.",
-      createdAt: new Date().toISOString(),
-    },
-  ];
-
   // Submit assignments
   const uploadFileToAppwrite = async (file: File) => {
     const response = await storage.createFile(BUCKET_ID, ID.unique(), file);
@@ -392,6 +380,7 @@ export function CenterContent({
           onClose={() => setShowSubmitModal(false)}
           onSubmit={handleSubmission}
           disabled={alreadySubmitted}
+          submittedData={submittedData}
         />
       )}
     </Card>

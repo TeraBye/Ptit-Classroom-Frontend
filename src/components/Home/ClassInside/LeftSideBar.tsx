@@ -4,12 +4,38 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { AssignmentModal } from "./ModalAssigmentCreation";
 import { useEffect, useState } from "react";
-import { getMyInfo, getConversations } from "@/app/api/libApi/api";
+import { getMyInfo, getConversations, API_BASE_URL } from "@/app/api/libApi/api";
+import { useParams } from "next/navigation";
 
 
 export function LeftSidebar() {
   const [showModal, setShowModal] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const params = useParams();
+  const id = params.classId;
+  const [classroom, setClassroom] = useState<any>(null);
+
+  useEffect(() => {
+      const token = localStorage.getItem("token");
+      if (!id || !token) return;
+  
+        // Lấy thông tin lớp học
+        fetch(`${API_BASE_URL}/classrooms/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.result) {
+            setClassroom(data.result);
+          } else {
+            setClassroom([]);
+          }
+        })
+        .catch((err) => console.error(err));
+    }, [id]);
+  
 
   useEffect(() => {
     const fetchData = async () => {
@@ -43,6 +69,7 @@ export function LeftSidebar() {
       </div>
       <h2 className="mt-4 text-xl font-bold">{user?.fullName}</h2>
       <p className="text-gray-600">{user?.role}</p>
+      <p className="text-gray-600">Class code: {classroom?.classCode}</p>
 
       <Button className="mt-4 w-full" variant="outline">
         Join meeting

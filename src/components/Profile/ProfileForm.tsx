@@ -39,6 +39,7 @@ export default function ProfileForm({ user, onSave }: { user: any; onSave: (data
           value={formData.username}
           onChange={handleChange}
           className="mt-1 block w-full border rounded-lg p-2"
+          disabled
           required
         />
       </div>

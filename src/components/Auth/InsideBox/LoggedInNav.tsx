@@ -18,6 +18,7 @@ import { useAuth } from "@/context/AuthContext";
 import toast from "react-hot-toast";
 import { getMyInfo } from "@/app/api/libApi/api";
 import { useRouter } from "next/navigation";
+import NotificationBell from "@/components/Home/Notification/NotificationBell";
 
 
 export default function LoggedInNav() {
@@ -84,9 +85,10 @@ export default function LoggedInNav() {
         <MessageSquare className="text-black" size={20} />
       </button>
 
-      <button className="p-2 rounded-full hover:bg-gray-200">
+      {/* <button className="p-2 rounded-full hover:bg-gray-200">
         <Bell className="text-black" size={20} />
-      </button>
+      </button> */}
+      <NotificationBell/>
 
       <div className="relative">
         <button
