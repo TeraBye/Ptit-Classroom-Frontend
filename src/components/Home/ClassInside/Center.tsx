@@ -9,9 +9,10 @@ import { CommentModal } from "@/components/Home/ClassInside/CommentModal";
 import { SubmitModal } from "@/components/Home/ClassInside/SubmitModal";
 import { Client, Storage, ID } from "appwrite";
 import { API_BASE_URL, getMyInfo } from "@/app/api/libApi/api";
-import { useRouter } from "next/navigation"; 
+import { useParams, useRouter } from "next/navigation";
 import { SubmissionListModal } from "./SubmissionListModal";
 import axiosInstance from "@/utils/axiosInstance";
+import StudentListModal from "./StudentListModal";
 
 interface PostProps {
   postId: number;
@@ -77,7 +78,12 @@ export function CenterContent({
   const [user, setUser] = useState<any>(null);
   const [showSubmissions, setShowSubmissions] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [submittedData, setSubmittedData] = useState<any>(null);
   const [comments, setComments] = useState<CommentProps[]>([]); // comments từ API
+  const [showStudentList, setShowStudentList] = useState(false);
+
+  const {classId} = useParams<{classId: string}>();
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,9 +102,22 @@ export function CenterContent({
   }, []);
 
   const handleSubmissionClick = async () => {
-    const res = await axiosInstance.get(`${API_BASE_URL}/assignments/${assignmentId}/check-submitted?studentUsername=${user?.username}`);
-    setAlreadySubmitted(res.data.result);
-    setShowSubmitModal(true)
+    try {
+      const res = await axiosInstance.get(`${API_BASE_URL}/assignments/${assignmentId}/get-submission?studentUsername=${user?.username}`);
+      console.log("submission data", res.data.result)
+      if (res.data.result && res.data.result.id) {
+        setAlreadySubmitted(true);
+        setSubmittedData(res.data.result);
+      } else {
+        setAlreadySubmitted(false);
+        setSubmittedData(null);
+      }
+      setShowSubmitModal(true);
+    } catch (err) {
+      setAlreadySubmitted(false);
+      setSubmittedData(null);
+      setShowSubmitModal(true);
+    }
   }
 
   const handleSubmission = async (note: string, file: File | null) => {
@@ -176,7 +195,7 @@ export function CenterContent({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-           Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           senderUsername: user.username,
@@ -195,6 +214,22 @@ export function CenterContent({
     }
   };
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const userData = await getMyInfo(token);
+        setUser(userData);
+      } catch (error) {
+        console.error("Error ", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+  
   // Submit assignments
   const uploadFileToAppwrite = async (file: File) => {
     const response = await storage.createFile(BUCKET_ID, ID.unique(), file);
@@ -230,14 +265,28 @@ export function CenterContent({
                 onClick={handleViewSubmissions}
               />
             )}
-            <Mail className="text-red-500 cursor-pointer hover:text-red-600" 
+            <Mail className="text-red-500 cursor-pointer hover:text-red-600"
               onClick={() => handleOpenMessage()}
             />
+            {/* Nút mở danh sách sinh viên */}
+            <button
+              className="px-2 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300"
+              onClick={() => setShowStudentList(true)}
+            >
+              Danh sách sinh viên
+            </button>
           </div>
           {showSubmissions && (
             <SubmissionListModal
               assignmentId={assignmentId}
               onClose={() => setShowSubmissions(false)}
+            />
+          )}
+          {showStudentList && (
+            <StudentListModal
+              open={showStudentList}
+              onClose={() => setShowStudentList(false)}
+              classroomId={Number(classId)} // Nếu bạn có classroomId riêng, hãy thay bằng biến đó
             />
           )}
         </div>
@@ -331,6 +380,7 @@ export function CenterContent({
           onClose={() => setShowSubmitModal(false)}
           onSubmit={handleSubmission}
           disabled={alreadySubmitted}
+          submittedData={submittedData}
         />
       )}
     </Card>

@@ -48,7 +48,14 @@ export function SubmissionListModal({ assignmentId, onClose }: SubmissionListMod
         setHasMore(false);
       }
 
-      setSubmissions((prev) => [...prev, ...data.result.content]);
+      setSubmissions((prev) => {
+        const newSubs = data.result.content;
+        // Lọc submissions mới chưa có trong prev
+        const uniqueSubs = newSubs.filter(
+          (sub) => !prev.some((p) => p.id === sub.id)
+        );
+        return [...prev, ...uniqueSubs];
+      });
       setPage((prev) => prev + 1);
     } catch (err) {
       console.error("Lỗi khi load submissions:", err);
@@ -89,7 +96,7 @@ export function SubmissionListModal({ assignmentId, onClose }: SubmissionListMod
             >
               <div className="font-semibold">{s.studentUsername}</div>
               <div className="text-sm text-gray-500">
-                Nộp lúc: {new Date(s.submitTime).toLocaleString()}
+                Nộp lúc: {s.submitTime}
               </div>
               {s.note && <p className="mt-2">{s.note}</p>}
               {s.fileUrl && (

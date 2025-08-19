@@ -26,6 +26,7 @@ export default function UserProfileCard() {
   const params = useParams();
   const id = params.classId;
   const [posts, setPosts] = useState<Post[]>([]);
+  
 
   useEffect(() => {
     const token = localStorage.getItem("token");
