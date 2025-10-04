@@ -43,7 +43,7 @@ export async function getClassroomByTeacherUsername(
   username: string,
   token?: string,
   page = 0,
-  size = 10
+  size = 9
 ) {
   const response = await axios.get(
     `${API_BASE_URL}/classrooms/teacher/${username}?page=${page}&size=${size}`,

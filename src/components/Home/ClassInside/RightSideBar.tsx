@@ -5,12 +5,13 @@ import { getMyInfo } from "@/app/api/libApi/api";
 import { Card } from "@/components/ui/card";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { toastError, toastSuccess } from '@/utils';
 
 // Modal review exam after create  
-function ReviewExamModal({ open, onClose, examData }: { 
-  open: boolean; 
-  onClose: () => void; 
-  examData: any; 
+function ReviewExamModal({ open, onClose, examData }: {
+  open: boolean;
+  onClose: () => void;
+  examData: any;
 }) {
   if (!open || !examData) return null;
 
@@ -20,8 +21,8 @@ function ReviewExamModal({ open, onClose, examData }: {
         {/* Tiêu đề */}
         <div className="flex justify-between items-center border-b pb-3 mb-4">
           <h2 className="text-xl font-bold">{examData.exam.title}</h2>
-          <button 
-            className="text-gray-500 hover:text-gray-700" 
+          <button
+            className="text-gray-500 hover:text-gray-700"
             onClick={onClose}
           >
             ✕
@@ -62,8 +63,8 @@ function ReviewExamModal({ open, onClose, examData }: {
 
         {/* Nút đóng */}
         <div className="flex justify-end mt-4">
-          <button 
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" 
+          <button
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             onClick={onClose}
           >
             Đóng
@@ -125,37 +126,37 @@ export default function ExamReviewModal({ isOpen, onClose, classId, user }: Exam
   const [problemExams, setProblemExams] = useState<number[]>([]); // danh sách examId bị isProblemExam=false
 
   useEffect(() => {
-  if (user?.role === "STUDENT" && exams.length > 0) {
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    if (user?.role === "STUDENT" && exams.length > 0) {
+      const token = localStorage.getItem("token");
+      if (!token) return;
 
-    const fetchStatuses = async () => {
-      try {
-        const results = await Promise.all(
-          exams.map(async (exam) => {
-            const res = await fetch(
-              `http://localhost:8888/api/exam/isProblemExam?student=${user.username}&examId=${exam.id}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-            );
-            const data = await res.json();
-            // Nếu isProblemExam = false => đã nộp
-            return !data?.result?.isProblemExam ? exam.id : null;
-          })
-        );
+      const fetchStatuses = async () => {
+        try {
+          const results = await Promise.all(
+            exams.map(async (exam) => {
+              const res = await fetch(
+                `http://localhost:8888/api/exam/isProblemExam?student=${user.username}&examId=${exam.id}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                }
+              );
+              const data = await res.json();
+              // Nếu isProblemExam = false => đã nộp
+              return !data?.result?.isProblemExam ? exam.id : null;
+            })
+          );
 
-        setProblemExams(results.filter((id) => id !== null) as number[]);
-      } catch (error) {
-        console.error("Error checking problem exams:", error);
-      }
-    };
+          setProblemExams(results.filter((id) => id !== null) as number[]);
+        } catch (error) {
+          console.error("Error checking problem exams:", error);
+        }
+      };
 
-    fetchStatuses();
-  }
-}, [user, exams]);
+      fetchStatuses();
+    }
+  }, [user, exams]);
 
   // Lấy danh sách bài thi (Level 1)
   useEffect(() => {
@@ -225,7 +226,7 @@ export default function ExamReviewModal({ isOpen, onClose, classId, user }: Exam
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-lg w-full max-w-3xl max-h-[90vh] flex flex-col">
-        
+
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b bg-blue-500 text-white rounded-t-xl">
           <h2 className="text-lg font-semibold">
@@ -262,14 +263,13 @@ export default function ExamReviewModal({ isOpen, onClose, classId, user }: Exam
               exams.map(exam => (
                 <button
                   key={exam.id}
-                  className={`w-full text-left border rounded-lg p-3 transition ${
-                    user?.role === "STUDENT" &&
+                  className={`w-full text-left border rounded-lg p-3 transition ${user?.role === "STUDENT" &&
                     new Date().getTime() - new Date(exam.beginTime).getTime() > 6 * 60 * 60 * 1000
-                      ? "bg-red-100 cursor-not-allowed"
-                      : problemExams.includes(exam.id)
+                    ? "bg-red-100 cursor-not-allowed"
+                    : problemExams.includes(exam.id)
                       ? "bg-yellow-100 cursor-not-allowed"
                       : "bg-gray-50 hover:bg-blue-50 hover:shadow-md"
-                  }`}
+                    }`}
                   onClick={() => {
                     if (user?.role === "TEACHER") {
                       loadStudents(exam);
@@ -399,7 +399,7 @@ function NewExamModal({
   }, [open]);
 
   const handleCreateExam = async () => {
-    
+
     const id = params.classId;
     try {
       const token = localStorage.getItem("token");
@@ -430,12 +430,13 @@ function NewExamModal({
         onClose();
         onExamCreated(data.result);
       } else {
-        alert("Failed to create exam");
+        toastError("Failed to create exam");
       }
     } catch (error) {
       console.error("Error creating exam:", error);
     }
   };
+
 
   if (!open) return null;
 
@@ -572,31 +573,31 @@ export function RightSidebar() {
           </button>
         ) : (
           <button className="mt-3 w-full border py-2 px-4 rounded"
-          onClick={() => setReviewOpen(true)}
+            onClick={() => setReviewOpen(true)}
           >Do exam</button>
         )}
 
         <div>
-      {/* Nút mở modal */}
-        {user?.role === "TEACHER" && (
-          <button
-            onClick={() => setReviewOpen(true)}
-            className="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-          >
-            Review exams
-          </button>
-        )}
+          {/* Nút mở modal */}
+          {user?.role === "TEACHER" && (
+            <button
+              onClick={() => setReviewOpen(true)}
+              className="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+            >
+              Review exams
+            </button>
+          )}
 
-      {/* Popup */}
-      <ExamReviewModal
-        isOpen={reviewOpen}
-        onClose={() => setReviewOpen(false)}
-        classId={Number(id)}
-        user={user}
-      />
-    </div>
+          {/* Popup */}
+          <ExamReviewModal
+            isOpen={reviewOpen}
+            onClose={() => setReviewOpen(false)}
+            classId={Number(id)}
+            user={user}
+          />
+        </div>
       </div>
-      
+
       <Card className="p-4">
         <h4 className="font-semibold mb-2">Assignments due soon</h4>
         {["Assignment 1", "Assignment 2", "Assignment 3"].map((job, index) => (

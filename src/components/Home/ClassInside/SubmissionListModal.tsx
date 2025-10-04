@@ -44,15 +44,14 @@ export function SubmissionListModal({ assignmentId, onClose }: SubmissionListMod
       const data = await res.json();
 
       if (data.result.content.length < 10) {
-        console.log("submissions data", data.result)
         setHasMore(false);
       }
 
       setSubmissions((prev) => {
-        const newSubs = data.result.content;
+        const newSubs = data.result.content as Submission[];
         // Lọc submissions mới chưa có trong prev
         const uniqueSubs = newSubs.filter(
-          (sub) => !prev.some((p) => p.id === sub.id)
+          (sub: Submission) => !prev.some((p) => p.id === sub.id)
         );
         return [...prev, ...uniqueSubs];
       });

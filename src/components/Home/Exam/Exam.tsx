@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/untils";
 import { useParams } from "next/navigation";
 import { getMyInfo } from "@/app/api/libApi/api";
+import { useRouter } from "next/navigation";
 
 const letterMap = ["A", "B", "C", "D", "E", "F"];
 
@@ -31,6 +32,7 @@ export default function Quiz() {
 
   const params = useParams();
   const examId = params.examId;
+  const router = useRouter();
 
   const [user, setUser] = useState<any>(null);
 
@@ -300,7 +302,14 @@ export default function Quiz() {
                 {new Date(resultData.submittedAt).toLocaleDateString("vi-VN")}
               </strong>
             </p>
-            <Button onClick={() => setShowResultModal(false)}>Đóng</Button>
+            <Button
+              onClick={() => {
+                setShowResultModal(false);
+                router.push("/");
+              }}
+            >
+              Đóng
+            </Button>
           </div>
         </div>
       )}

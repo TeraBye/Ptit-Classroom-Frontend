@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   PlayIcon,
   QuestionMarkCircleIcon,
@@ -7,7 +7,7 @@ import {
   PlusIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
-import Item from "./ClassItem";
+import ClassCard from "./ClassCard";
 import {
   createClassroom,
   getAllSubjects,
@@ -16,6 +16,9 @@ import {
   addStudent,
   getStudentClasses,
 } from "@/app/api/libApi/api"; // import hàm vừa tạo
+import axiosInstance from '@/utils/axiosInstance';
+import { toastError, toastSuccess } from '@/utils';
+import EditClassModal from './EditClassModal';
 import { useRouter } from "next/navigation";
 
 type LessonType = "video" | "quiz" | "live";
@@ -40,6 +43,15 @@ interface User {
 }
 
 const Classroom = () => {
+  const getErrorMessage = (e: unknown) => {
+    try {
+      // axios error shape
+      const anyE = e as any;
+      return anyE?.response?.data?.message || anyE?.message || String(e);
+    } catch {
+      return String(e);
+    }
+  };
   const [sections] = useState<Section[]>([
     {
       title: "Join Classroom",
@@ -75,7 +87,7 @@ const Classroom = () => {
   // State cho form
   const [form, setForm] = useState({
     name: "",
-    subject: "",
+    subjectId: "",
     meetLink: "",
     isPublic: true,
     teacherUsername: "",
@@ -84,9 +96,97 @@ const Classroom = () => {
   // State cho danh sách môn học và search
   const [subjects, setSubjects] = useState<any[]>([]);
   const [search, setSearch] = useState("");
+  const subjectRef = useRef<HTMLDivElement | null>(null);
+  const [subjectFocused, setSubjectFocused] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const [token, setToken] = useState<string | undefined>(undefined);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingClass, setEditingClass] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState<'active' | 'inactive'>('active');
+  const [pendingDelete, setPendingDelete] = useState<number | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // ConfirmDelete component inside file
+  const ConfirmDelete = () => {
+    const ref = React.useRef<HTMLDivElement | null>(null);
+    React.useEffect(() => {
+      function handleOutside(e: MouseEvent) {
+        if (ref.current && !ref.current.contains(e.target as Node)) {
+          setConfirmOpen(false);
+          setPendingDelete(null);
+        }
+      }
+      document.addEventListener('mousedown', handleOutside);
+      return () => document.removeEventListener('mousedown', handleOutside);
+    }, []);
+
+    return (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div ref={ref} className="bg-white rounded-lg p-6 w-full max-w-sm">
+          <h3 className="text-lg font-semibold mb-3">Confirm delete</h3>
+          <p className="text-sm text-gray-600 mb-4">Are you sure you want to delete this classroom?</p>
+          <div className="flex justify-end gap-2">
+            <button className="px-3 py-1 border rounded" onClick={() => { setConfirmOpen(false); setPendingDelete(null); }}>Cancel</button>
+            <button className="px-3 py-1 bg-red-600 text-white rounded" onClick={async () => {
+              if (!pendingDelete) return;
+              try {
+                await axiosInstance.delete(`/classrooms/${pendingDelete}`);
+                toastSuccess('Delete classroom successfully');
+                // update local state instead of refetching
+                setClassrooms(prev => prev.map(item => {
+                  // items may be plain classroom (teacher view) or wrapper { classroom } (student view)
+                  const cls = (item as any).classroom ?? item;
+                  if (cls && cls.id === pendingDelete) {
+                    const updated = { ...cls, deleted: true };
+                    if ((item as any).classroom) return { ...(item as any), classroom: updated };
+                    return updated as any;
+                  }
+                  return item;
+                }));
+                setPendingDelete(null);
+                setConfirmOpen(false);
+              } catch (err) {
+                console.error(err);
+                toastError(getErrorMessage(err));
+              }
+            }}>Delete</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const handleSaveClass = async (updated: any) => {
+    if (!editingClass) return;
+    try {
+      // map frontend `isPublic` -> backend `public` (Java boolean field named isPublic maps to JSON property "public")
+      const { isPublic, ...rest } = updated;
+      const payload = { ...rest, public: isPublic };
+      const res = await axiosInstance.put(`/classrooms/${editingClass.id}`, payload);
+      // backend returns { code: 0, result: { ...updatedClass } }
+      const updatedClass = res?.data?.result ?? res?.data ?? null;
+      // update local state by replacing the matching item
+      if (updatedClass) {
+        setClassrooms(prev => prev.map(item => {
+          const cls = (item as any).classroom ?? item;
+          if (cls && cls.id === updatedClass.id) {
+            if ((item as any).classroom) {
+              return { ...(item as any), classroom: updatedClass };
+            }
+            return updatedClass as any;
+          }
+          return item;
+        }));
+      }
+      setEditOpen(false);
+      setEditingClass(null);
+    } catch (err) {
+      console.error(err);
+      toastError(getErrorMessage(err));
+    }
+  };
 
   const router = useRouter();
 
@@ -144,6 +244,17 @@ const Classroom = () => {
       // Lấy danh sách môn học
       getAllSubjects(token).then(setSubjects);
     }
+    // close subject dropdown when clicking outside
+    function handleClickOutside(e: MouseEvent) {
+      if (subjectRef.current && !subjectRef.current.contains(e.target as Node)) {
+        setSearch('');
+        setSubjectFocused(false);
+        setHighlightedIndex(-1);
+      }
+    }
+    // we only need listener while modal is open
+    if (showModal) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showModal, token]);
 
   const getIcon = (type: LessonType) => {
@@ -182,13 +293,16 @@ const Classroom = () => {
     try {
       const data = {
         ...form,
-        subject: { id: form.subject }, // chỉ cần id
+        subject: { id: form.subjectId }, // chỉ cần id
       };
-      await createClassroom(data, token);
+      // map isPublic -> public for backend
+      const { isPublic, ...restData } = data;
+      const createPayload = { ...restData, public: isPublic };
+      await createClassroom(createPayload, token);
       setShowModal(false);
       setForm({
         name: "",
-        subject: "",
+        subjectId: "",
         meetLink: "",
         isPublic: true,
         teacherUsername: "", // hoặc gọi lại getMyInfo(token) nếu cần
@@ -208,7 +322,7 @@ const Classroom = () => {
       }
     } catch (error) {
       console.error(error);
-      alert("Tạo classroom thất bại!");
+      toastError(getErrorMessage(error));
     }
   };
 
@@ -297,16 +411,55 @@ const Classroom = () => {
             </div>
           ) : (
             <div>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setActiveTab('active')} className={`px-3 py-1 rounded ${activeTab === 'active' ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}>Active</button>
+                  <button onClick={() => setActiveTab('inactive')} className={`px-3 py-1 rounded ${activeTab === 'inactive' ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}>Inactive</button>
+                  <div className="text-sm text-gray-500 ml-4">Total: {classrooms.length}</div>
+                </div>
+                <div className="text-sm text-gray-500">Students total: {classrooms.reduce((acc, c) => acc + ((c.classroom?.studentNum ?? c.studentNum) || 0), 0)}</div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {user?.role === "TEACHER" &&
-                  classrooms.map((classroom) => (
-                    <Item key={classroom.id} classroom={classroom} />
-                  ))}
-
-                {user?.role === "STUDENT" &&
-                  classrooms.map((classroom) => (
-                    <Item key={classroom.id} classroom={classroom.classroom} />
-                  ))}
+                {classrooms.filter(c => {
+                  const cls = user?.role === 'STUDENT' ? c.classroom ?? c : c;
+                  return activeTab === 'active' ? !cls.deleted : cls.deleted;
+                }).map((c) => {
+                  const classroom = user?.role === 'STUDENT' ? c.classroom ?? c : c;
+                  return (
+                    <ClassCard
+                      key={classroom.id}
+                      classroom={classroom}
+                      currentRole={user?.role}
+                      onEdit={(cls) => {
+                        setEditingClass(cls);
+                        setEditOpen(true);
+                      }}
+                      onActivate={async (id) => {
+                        try {
+                          // Assumption: endpoint to restore is PATCH /classrooms/{id}/restore
+                          await axiosInstance.patch(`/classrooms/${id}/restore`);
+                          // update local state: mark deleted = false
+                          setClassrooms(prev => prev.map(item => {
+                            const cls = (item as any).classroom ?? item;
+                            if (cls && cls.id === id) {
+                              const updated = { ...cls, deleted: false };
+                              if ((item as any).classroom) return { ...(item as any), classroom: updated };
+                              return updated as any;
+                            }
+                            return item;
+                          }));
+                        } catch (err) {
+                          console.error(err);
+                          toastError(getErrorMessage(err));
+                        }
+                      }}
+                      onDelete={(id) => {
+                        setPendingDelete(id);
+                        setConfirmOpen(true);
+                      }}
+                    />
+                  );
+                })}
               </div>
               <div className="flex justify-center mt-4 gap-2">
                 <button
@@ -378,33 +531,62 @@ const Classroom = () => {
                   Public
                 </label>
                 {/* Combobox môn học autocomplete */}
-                <div className="relative">
+                <div className="relative" ref={subjectRef}>
                   <input
                     className="w-full border p-2 rounded mb-2"
                     placeholder="Search subject..."
-                    value={form.subject ? subjects.find(s => s.id === form.subject)?.name || search : search}
+                    value={form.subjectId ? subjects.find(s => s.id === form.subjectId)?.name || search : search}
                     onChange={e => {
                       setSearch(e.target.value);
-                      setForm(prev => ({ ...prev, subject: '' }));
+                      // clear selected subjectId when user types
+                      setForm(prev => ({ ...prev, subjectId: '' }));
+                      setHighlightedIndex(-1);
                     }}
                     autoComplete="off"
-                    onFocus={() => setSearch('')}
+                    onFocus={() => { setSearch(''); setSubjectFocused(true); setHighlightedIndex(-1); }}
+                    onKeyDown={(e) => {
+                      const len = filteredSubjects.length;
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        setHighlightedIndex(prev => (prev + 1) % Math.max(1, len));
+                        setSubjectFocused(true);
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        setHighlightedIndex(prev => (prev <= 0 ? len - 1 : prev - 1));
+                        setSubjectFocused(true);
+                      } else if (e.key === 'Enter') {
+                        if (highlightedIndex >= 0 && highlightedIndex < len) {
+                          const subject = filteredSubjects[highlightedIndex];
+                          setForm(prev => ({ ...prev, subjectId: subject.id }));
+                          setSearch('');
+                          setSubjectFocused(false);
+                          setHighlightedIndex(-1);
+                        }
+                      } else if (e.key === 'Escape') {
+                        setSubjectFocused(false);
+                        setSearch('');
+                        setHighlightedIndex(-1);
+                      }
+                    }}
                     required
                   />
                   {/* Dropdown gợi ý môn học */}
-                  {search && !form.subject && (
+                  {subjectFocused && !form.subjectId && (
                     <div className="absolute left-0 right-0 bg-white border rounded shadow z-10 max-h-40 overflow-auto">
                       {filteredSubjects.length === 0 && (
                         <div className="p-2 text-gray-400">No subject found</div>
                       )}
-                      {filteredSubjects.map(subject => (
+                      {filteredSubjects.map((subject, idx) => (
                         <div
                           key={subject.id}
-                          className="p-2 hover:bg-blue-100 cursor-pointer"
+                          className={`p-2 cursor-pointer ${highlightedIndex === idx ? 'bg-blue-100' : 'hover:bg-blue-100'}`}
                           onMouseDown={() => {
-                            setForm(prev => ({ ...prev, subject: subject.id }));
+                            setForm(prev => ({ ...prev, subjectId: subject.id }));
                             setSearch('');
+                            setSubjectFocused(false);
+                            setHighlightedIndex(-1);
                           }}
+                          onMouseEnter={() => setHighlightedIndex(idx)}
                         >
                           {subject.name}
                         </div>
@@ -412,8 +594,8 @@ const Classroom = () => {
                     </div>
                   )}
                   {/* Nếu đã chọn môn, hiện nút xóa/chọn lại */}
-                  {form.subject && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-red-500" onClick={() => setForm(prev => ({ ...prev, subject: '' }))} title="Clear">
+                  {form.subjectId && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-red-500" onClick={() => setForm(prev => ({ ...prev, subjectId: '' }))} title="Clear">
                       ×
                     </div>
                   )}
@@ -427,6 +609,9 @@ const Classroom = () => {
               </form>
             </div>
           </div>
+        )}
+        {editingClass && (
+          <EditClassModal open={editOpen} onClose={() => { setEditOpen(false); setEditingClass(null); }} classroom={editingClass} onSave={handleSaveClass} />
         )}
 
         {showJoinModal && (
@@ -454,7 +639,7 @@ const Classroom = () => {
                     setClassCode("");
                     router.push(`/class-inside/${res.classroom.id}`);
                   } catch (err) {
-                    alert("Join failed! Please check your code.");
+                    toastError(getErrorMessage(err));
                   } finally {
                     setJoinLoading(false);
                   }
@@ -480,6 +665,10 @@ const Classroom = () => {
           </div>
         )}
       </div>
+
+      {confirmOpen && (
+        <ConfirmDelete />
+      )}
     </section>
   );
 };
