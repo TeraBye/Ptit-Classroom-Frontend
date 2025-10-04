@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { toastError, toastSuccess } from '@/utils';
 import { Card, CardContent } from "@/components/ui/card";
 import { MessageCircle, Upload, Mail, X, ClipboardList } from "lucide-react";
 import { CommentProps } from "@/components/Home/ClassInside/Comment";
@@ -82,7 +83,7 @@ export function CenterContent({
   const [comments, setComments] = useState<CommentProps[]>([]); // comments từ API
   const [showStudentList, setShowStudentList] = useState(false);
 
-  const {classId} = useParams<{classId: string}>();
+  const { classId } = useParams<{ classId: string }>();
 
 
   useEffect(() => {
@@ -104,7 +105,6 @@ export function CenterContent({
   const handleSubmissionClick = async () => {
     try {
       const res = await axiosInstance.get(`${API_BASE_URL}/assignments/${assignmentId}/get-submission?studentUsername=${user?.username}`);
-      console.log("submission data", res.data.result)
       if (res.data.result && res.data.result.id) {
         setAlreadySubmitted(true);
         setSubmittedData(res.data.result);
@@ -117,6 +117,12 @@ export function CenterContent({
       setAlreadySubmitted(false);
       setSubmittedData(null);
       setShowSubmitModal(true);
+      try {
+        const anyErr = err as any;
+        toastError(anyErr?.response?.data?.message || String(err));
+      } catch {
+        toastError(String(err));
+      }
     }
   }
 
@@ -145,6 +151,7 @@ export function CenterContent({
       setShowSubmitModal(false);
     } catch (err) {
       console.error(err);
+      toastError('Lỗi khi nộp bài');
     }
   };
 
@@ -229,7 +236,7 @@ export function CenterContent({
 
     fetchData();
   }, []);
-  
+
   // Submit assignments
   const uploadFileToAppwrite = async (file: File) => {
     const response = await storage.createFile(BUCKET_ID, ID.unique(), file);
