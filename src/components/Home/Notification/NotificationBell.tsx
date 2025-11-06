@@ -39,7 +39,7 @@ export default function NotificationBell() {
   useEffect(() => {
     async function fetchNotifications() {
       try {
-        const res = await axiosInstance.get(`${API_BASE_URL}/notification/${username}`);
+        const res = await axiosInstance.get(`${API_BASE_URL}/notifications/${username}`);
 
         const data: Notification[] = res.data.result;
 

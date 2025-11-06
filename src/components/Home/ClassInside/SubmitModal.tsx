@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,11 +24,33 @@ export function SubmitModal({ onClose, onSubmit, disabled = false, submittedData
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showFilePreview, setShowFilePreview] = useState(false);
 
-  const isSubmitted = disabled || Boolean(submittedData);
+  // if parent sets disabled=true we'll disable inputs; but submittedData itself should not block resubmission
+  const isDisabled = Boolean(disabled);
+
+  // Prefill note when submittedData changes
+  useEffect(() => {
+    if (submittedData?.note) setNote(submittedData.note || '');
+    // show previous file preview if desired (do not overwrite file state)
+    if (submittedData?.fileUrl) {
+      // don't auto-open preview; keep available
+    }
+  }, [submittedData]);
 
   const handleSubmit = () => {
     onSubmit(note, file);
   };
+
+  // cleanup object URL when file changes/unmount
+  useEffect(() => {
+    let obj: string | null = null;
+    if (file) {
+      obj = URL.createObjectURL(file);
+      setPreviewUrl(obj);
+    }
+    return () => {
+      if (obj) URL.revokeObjectURL(obj);
+    };
+  }, [file]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
@@ -45,9 +67,9 @@ export function SubmitModal({ onClose, onSubmit, disabled = false, submittedData
         <div className="space-y-4">
           {submittedData && (
             <div className="p-4 border rounded bg-gray-50">
-              <div className="font-medium text-sm">Bạn đã nộp</div>
+              <div className="font-medium text-sm">You have previously submitted</div>
               {submittedData.submitTime && (
-                <div className="text-xs text-gray-500">Nộp lúc: {submittedData.submitTime}</div>
+                <div className="text-xs text-gray-500">Last submission: {submittedData.submitTime}</div>
               )}
               {submittedData.note && <p className="mt-2">{submittedData.note}</p>}
               {submittedData.fileUrl && (
@@ -59,58 +81,43 @@ export function SubmitModal({ onClose, onSubmit, disabled = false, submittedData
                     setShowFilePreview(true);
                   }}
                 >
-                  📄 Xem file
+                  📄 View previous file
                 </button>
               )}
             </div>
           )}
 
-          {!isSubmitted ? (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Note
-              </label>
-              <Textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Enter your notes..."
-                className="w-full"
-              />
+          {/* Submission inputs (respect disabled prop) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
+            <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Enter your notes..." className="w-full" disabled={isDisabled} />
 
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Attached file
+            <label className="block text-sm font-medium text-gray-700 mb-1">Attached file</label>
+            <div className="flex items-center justify-center w-full">
+              <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg ${isDisabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-gray-50 hover:bg-gray-100 cursor-pointer'}`}>
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                  <p className="mb-2 text-sm text-gray-500">{file ? file.name : 'Drag and drop files or click to upload'}</p>
+                </div>
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    const selectedFile = e.target.files?.[0] || null;
+                    setFile(selectedFile);
+                  }}
+                  disabled={isDisabled}
+                />
               </label>
-              <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                    <p className="mb-2 text-sm text-gray-500">
-                      {file ? file.name : 'Drag and drop files or click to upload'}
-                    </p>
-                  </div>
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => {
-                      const selectedFile = e.target.files?.[0] || null;
-                      setFile(selectedFile);
-                      if (selectedFile) {
-                        setPreviewUrl(URL.createObjectURL(selectedFile));
-                        setShowFilePreview(true);
-                      }
-                    }}
-                  />
-                </label>
-              </div>
             </div>
-          ) : null}
+          </div>
 
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitted}>
-              {isSubmitted ? "Submitted" : "Submit"}
+            <Button onClick={handleSubmit} disabled={isDisabled}>
+              {submittedData ? "Resubmit" : "Submit"}
             </Button>
           </div>
         </div>
