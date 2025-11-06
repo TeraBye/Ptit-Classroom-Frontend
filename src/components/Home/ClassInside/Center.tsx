@@ -275,13 +275,13 @@ export function CenterContent({
             <Mail className="text-red-500 cursor-pointer hover:text-red-600"
               onClick={() => handleOpenMessage()}
             />
-            {/* Nút mở danh sách sinh viên */}
-            <button
+            {/* Student list button (kept for post-level access) */}
+            {/* <button
               className="px-2 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300"
               onClick={() => setShowStudentList(true)}
             >
-              Danh sách sinh viên
-            </button>
+              Student list
+            </button> */}
           </div>
           {showSubmissions && (
             <SubmissionListModal
@@ -319,14 +319,14 @@ export function CenterContent({
                 <p className="text-sm font-medium text-gray-700">
                   {fileUrl.split("/").pop()}
                 </p>
-                <p className="text-xs text-gray-500">File đính kèm</p>
+                <p className="text-xs text-gray-500">Attached file</p>
               </div>
             </div>
             <button
               onClick={() => setShowPreview(true)}
               className="text-blue-600 text-sm hover:underline"
             >
-              Xem file
+              View file
             </button>
           </div>
         )}
@@ -386,7 +386,6 @@ export function CenterContent({
         <SubmitModal
           onClose={() => setShowSubmitModal(false)}
           onSubmit={handleSubmission}
-          disabled={alreadySubmitted}
           submittedData={submittedData}
         />
       )}

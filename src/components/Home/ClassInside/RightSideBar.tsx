@@ -1,11 +1,15 @@
 'use client';
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import { Client, Storage, ID } from "appwrite";
 import { getMyInfo } from "@/app/api/libApi/api";
+import axiosInstance from '@/utils/axiosInstance';
+import { API_BASE_URL } from '@/app/api/libApi/api';
 import { Card } from "@/components/ui/card";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { toastError, toastSuccess } from '@/utils';
+import { SubmitModal } from "@/components/Home/ClassInside/SubmitModal";
 
 // Modal review exam after create  
 function ReviewExamModal({ open, onClose, examData }: {
@@ -67,7 +71,7 @@ function ReviewExamModal({ open, onClose, examData }: {
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             onClick={onClose}
           >
-            Đóng
+            Close
           </button>
         </div>
       </div>
@@ -287,7 +291,7 @@ export default function ExamReviewModal({ isOpen, onClose, classId, user }: Exam
                   <p className="text-sm text-gray-600">📅 {new Date(exam.beginTime).toLocaleString()}</p>
                   <p className="text-sm text-gray-600">📝 {exam.numberOfQuestion} questions</p>
                   {problemExams.includes(exam.id) && (
-                    <p className="text-sm font-semibold text-yellow-700">✅ Đã nộp</p>
+                    <p className="text-sm font-semibold text-yellow-700">✅ Submitted</p>
                   )}
                 </button>
               ))
@@ -529,9 +533,25 @@ export function RightSidebar() {
   const [reviewData, setReviewData] = useState<any>(null);
   const [openReviewModal, setOpenReviewModal] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  // assignments for student view
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignTab, setAssignTab] = useState<'ALL' | 'SUBMITTED' | 'NOT_SUBMITTED'>('ALL');
+  const [assignPage, setAssignPage] = useState(0);
+  const [assignTotalPages, setAssignTotalPages] = useState(1);
+  const assignContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // inline submit modal state
+  const [submitModalOpen, setSubmitModalOpen] = useState(false);
+  const [submitAssign, setSubmitAssign] = useState<any | null>(null);
+  const [submittedData, setSubmittedData] = useState<any | null>(null);
+  const [submitLoading, setSubmitLoading] = useState(false);
 
   const params = useParams();
   const id = params.classId;
+  const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -548,6 +568,182 @@ export function RightSidebar() {
 
     fetchData();
   }, []);
+
+  // load student assignments for this classroom (only for STUDENT role)
+  useEffect(() => {
+    // If not a student, skip loading student assignments entirely
+    if (!user || user?.role !== 'STUDENT') {
+      setAssignments([]);
+      setAssignPage(0);
+      setAssignTotalPages(1);
+      setAssignLoading(false);
+      return;
+    }
+
+    // load page 0 when user/id/tab changes
+    setAssignments([]);
+    setAssignPage(0);
+    setAssignTotalPages(1);
+
+    const loadAssignments = async (page = 0, status?: string, append = false) => {
+      if (!user || !id) return;
+      try {
+        if (append) setIsLoadingMore(true); else setAssignLoading(true);
+        const token = localStorage.getItem('token');
+        const size = 6; // page size
+        const params: string[] = [`studentUsername=${user.username}`, `classroomId=${id}`, `page=${page}`, `size=${size}`];
+        if (status && status !== 'ALL') params.push(`status=${status}`);
+        const url = `${API_BASE_URL}/assignments/student?${params.join('&')}`;
+        const res = await axiosInstance.get(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        const pageData = res.data?.result ?? null;
+        const data = pageData?.content ?? [];
+
+        if (append) {
+          setAssignments(prev => {
+            const prevIds = new Set(prev.map((p: any) => (p.assignment?.id ?? p.id)));
+            const filtered = data.filter((d: any) => !prevIds.has(d.assignment?.id ?? d.id));
+            return [...prev, ...filtered];
+          });
+        } else {
+          setAssignments(data);
+        }
+
+        const resolvedPage = pageData?.number ?? pageData?.pageable?.pageNumber ?? page;
+        const resolvedTotal = pageData?.totalPages ?? pageData?.pageable?.totalPages ?? 1;
+        setAssignPage(resolvedPage);
+        setAssignTotalPages(resolvedTotal);
+      } catch (err) {
+        console.error(err);
+        toastError((err as any)?.response?.data?.message || 'Failed to load assignments');
+      } finally {
+        setAssignLoading(false);
+        setIsLoadingMore(false);
+      }
+    };
+
+    // initial load
+    loadAssignments(0, assignTab === 'ALL' ? undefined : assignTab, false);
+
+    // expose load more on ref for scroll handler
+    (assignContainerRef as any).currentLoadMore = async (nextPage: number) => {
+      await loadAssignments(nextPage, assignTab === 'ALL' ? undefined : assignTab, true);
+    };
+  }, [user, id, assignTab]);
+
+  // infinite scroll: fetch next page when scrolled near bottom
+  useEffect(() => {
+    const el = assignContainerRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      if (assignLoading || isLoadingMore) return;
+      if (assignPage + 1 >= assignTotalPages) return;
+      const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      if (scrollBottom < 120) {
+        const next = assignPage + 1;
+        // call loader attached above
+        (assignContainerRef as any).currentLoadMore?.(next);
+      }
+    };
+
+    el.addEventListener('scroll', onScroll);
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [assignLoading, assignPage, assignTotalPages, assignModalOpen]);
+
+  // Appwrite client for uploading files (used for inline submit)
+  const appwriteClient = new Client()
+    .setEndpoint("https://cloud.appwrite.io/v1")
+    .setProject("67f02a3c00396aab7f01");
+  const storage = new Storage(appwriteClient);
+  const BUCKET_ID = "67f02a57000c66380420";
+  const ProjectID = "67f02a3c00396aab7f01";
+
+  const uploadFileToAppwrite = async (file: File) => {
+    const response = await storage.createFile(BUCKET_ID, ID.unique(), file);
+    return `https://cloud.appwrite.io/v1/storage/buckets/${BUCKET_ID}/files/${response.$id}/view?project=${ProjectID}`;
+  };
+
+  const handleOpenSubmit = async (asg: any) => {
+    setSubmitAssign(asg);
+    setSubmitLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axiosInstance.get(`${API_BASE_URL}/assignments/${asg.id}/get-submission?studentUsername=${user?.username}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      if (res.data?.result && res.data.result.id) {
+        setSubmittedData(res.data.result);
+      } else {
+        setSubmittedData(null);
+      }
+      setSubmitModalOpen(true);
+    } catch (err) {
+      console.error('Error fetching submission', err);
+      setSubmittedData(null);
+      setSubmitModalOpen(true);
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const reloadAssignments = async () => {
+    if (!user || !id) return;
+    try {
+      setAssignLoading(true);
+      const token = localStorage.getItem('token');
+      const size = 6;
+      const params: string[] = [`studentUsername=${user.username}`, `classroomId=${id}`, `page=0`, `size=${size}`];
+      if (assignTab && assignTab !== 'ALL') params.push(`status=${assignTab}`);
+      const url = `${API_BASE_URL}/assignments/student?${params.join('&')}`;
+      const res = await axiosInstance.get(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const pageData = res.data?.result ?? null;
+      const data = pageData?.content ?? [];
+      setAssignments(data);
+      const resolvedPage = pageData?.number ?? pageData?.pageable?.pageNumber ?? 0;
+      const resolvedTotal = pageData?.totalPages ?? pageData?.pageable?.totalPages ?? 1;
+      setAssignPage(resolvedPage);
+      setAssignTotalPages(resolvedTotal);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAssignLoading(false);
+    }
+  };
+
+  const handleSubmit = async (note: string, file: File | null) => {
+    if (!submitAssign) return;
+    try {
+      setSubmitLoading(true);
+      let fileUrl = "";
+      if (file) {
+        fileUrl = await uploadFileToAppwrite(file);
+      }
+      const token = localStorage.getItem('token');
+      await fetch(`${API_BASE_URL}/assignments/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          assignmentId: submitAssign.id,
+          studentUsername: user?.username,
+          note,
+          fileUrl,
+        }),
+      });
+
+      setSubmitModalOpen(false);
+      setSubmitAssign(null);
+      setSubmittedData(null);
+      // reload assignments to reflect submission
+      await reloadAssignments();
+      toastSuccess('Submitted successfully');
+    } catch (err) {
+      console.error(err);
+      toastError('Failed to submit');
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
 
   return (
     <div className="w-full md:w-64 flex flex-col gap-4">
@@ -599,14 +795,107 @@ export function RightSidebar() {
       </div>
 
       <Card className="p-4">
-        <h4 className="font-semibold mb-2">Assignments due soon</h4>
-        {["Assignment 1", "Assignment 2", "Assignment 3"].map((job, index) => (
-          <div key={index} className="mb-2">
-            <p className="text-sm font-medium">{job}</p>
-            <p className="text-xs text-gray-500">Due in 3 hours!</p>
-          </div>
-        ))}
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="font-semibold">Assignments</h4>
+          <div className="text-sm text-gray-500">{assignments.length} items</div>
+        </div>
+
+        {/* Tabs moved into modal to avoid duplication */}
+
+        <div className="text-sm">
+          {assignLoading ? (
+            <div className="text-sm text-gray-500">Loading...</div>
+          ) : (
+            <div className="mb-2 text-gray-600">{assignments.length} assignments</div>
+          )}
+          <button onClick={() => setAssignModalOpen(true)} disabled={assignLoading} className={`w-full px-3 py-2 ${assignLoading ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-blue-600 text-white'} rounded`}>Open assignments</button>
+        </div>
       </Card>
+
+      {/* Assignments modal (large view) */}
+      {assignModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white w-full max-w-4xl rounded-lg shadow-lg p-4 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold">Assignments</h3>
+              <div className="flex items-center gap-2">
+                <div className="text-sm text-gray-500">{assignments.length} items</div>
+                <button onClick={() => setAssignModalOpen(false)} className="px-3 py-1 bg-gray-200 rounded">Close</button>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mb-3">
+              {(['ALL', 'NOT_SUBMITTED', 'SUBMITTED'] as const).map(tab => (
+                <button key={tab} onClick={() => setAssignTab(tab)} className={`px-3 py-1 rounded text-sm ${assignTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                  {tab === 'ALL' ? 'All' : tab === 'NOT_SUBMITTED' ? 'Not submitted' : 'Submitted'}
+                </button>
+              ))}
+            </div>
+
+            <div ref={assignContainerRef} className="overflow-y-auto flex-1 space-y-3">
+              {assignLoading ? (
+                <div className="text-sm text-gray-500">Loading...</div>
+              ) : assignments.length === 0 ? (
+                <div className="text-sm text-gray-500">No assignments</div>
+              ) : (
+                assignments.map((item: any) => {
+                  const asg = item.assignment || item;
+                  const status = item.status;
+                  const submission = item.submission;
+                  const dueDate = new Date(asg.deadline);
+                  const now = new Date();
+                  const diffMs = dueDate.getTime() - now.getTime();
+                  const isUrgent = status === 'NOT_SUBMITTED' && diffMs > 0 && diffMs < 24 * 60 * 60 * 1000;
+                  return (
+                    <div key={asg.id} className={`border rounded p-3 ${isUrgent ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className={`font-medium ${isUrgent ? 'text-red-600' : ''}`}>{asg.name}</div>
+                          <div className="text-xs text-gray-500">Due: {asg.deadline}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-sm font-medium ${status === 'NOT_SUBMITTED' ? 'text-gray-500' : status === 'LATE' ? 'text-red-500' : 'text-green-600'}`}>
+                            {status === 'NOT_SUBMITTED' ? 'Not submitted' : status === 'LATE' ? 'Late' : 'Submitted'}
+                          </div>
+                          <div className="text-xs text-gray-400">{submission ? 'Submitted at ' + submission.submitTime : '—'}</div>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 flex items-center justify-between">
+                        <div>
+                          {asg.fileUrl && (
+                            <a href={asg.fileUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">📄 View assignment</a>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          {submission ? (
+                            <button onClick={() => { setAssignModalOpen(false); router.push(`/class-inside/${asg.classroomId}`); }} className="px-3 py-1 text-sm bg-gray-100 rounded">View</button>
+                          ) : (
+                            <button onClick={() => handleOpenSubmit(asg)} className="px-3 py-1 text-sm bg-blue-500 text-white rounded">Submit</button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              {isLoadingMore && (
+                <div className="py-3 text-center text-sm text-gray-500">Loading more...</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Submit Modal */}
+      {submitModalOpen && (
+        <SubmitModal
+          onClose={() => setSubmitModalOpen(false)}
+          onSubmit={handleSubmit}
+          submittedData={submittedData}
+          disabled={submitLoading}
+        />
+      )}
 
       {/* Popup Tạo exam */}
       <NewExamModal

@@ -108,13 +108,13 @@ export const CommentModal = ({
           <X size={24} />
         </button>
 
-        <h2 className="text-lg font-semibold px-6 pt-6">Bình luận</h2>
+  <h2 className="text-lg font-semibold px-6 pt-6">Comments</h2>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {comments.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '20px', color: '#777' }}>
-              Không có bình luận nào
-            </div>
+                No comments
+              </div>
           ) : (
             comments.map((cmt, index) => (
               <Comment key={index} {...cmt} />
@@ -123,9 +123,9 @@ export const CommentModal = ({
         </div>
 
         <div className="p-4 border-t flex gap-2">
-          <input
+            <input
             type="text"
-            placeholder="Viết bình luận..."
+            placeholder="Write a comment..."
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -137,7 +137,7 @@ export const CommentModal = ({
             disabled={loading}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
           >
-            Gửi
+            Send
           </button>
         </div>
       </div>
