@@ -34,8 +34,8 @@ export async function getAllSubjects(token?: string) {
     });
     console.log("subjects", response.data.result);
     return response.data.result;
-  } catch (error) {
-    toast.error(error.message)
+  } catch (error: any) {
+    toast.error(error?.message || String(error));
   }
 }
 

@@ -3,6 +3,8 @@ import React, { useState } from "react";
 interface Question {
   id: number;
   content: string;
+  explanation?: string;
+  level?: string;
   optionA: string;
   optionB: string;
   optionC: string;
@@ -35,7 +37,17 @@ export default function QuestionCard({ question, onEdit, onDelete }: QuestionCar
   return (
     <>
       <div className="border rounded-lg bg-white shadow-sm p-4 hover:shadow-md transition">
-        <p className="font-medium">{question.content}</p>
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <p className="font-medium flex-1">{question.content}</p>
+          {question.level && (
+            <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${question.level === 'EASY' ? 'bg-green-100 text-green-700' :
+                question.level === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-red-100 text-red-700'
+              }`}>
+              {question.level}
+            </span>
+          )}
+        </div>
         <ul className="text-sm text-gray-600 mt-2 space-y-1">
           <li><strong>A:</strong> {question.optionA}</li>
           <li><strong>B:</strong> {question.optionB}</li>
@@ -45,6 +57,11 @@ export default function QuestionCard({ question, onEdit, onDelete }: QuestionCar
         <p className="mt-2 text-green-600 text-sm">
           Correct Answer: {question.correctAnswer}
         </p>
+        {question.explanation && (
+          <p className="mt-2 text-sm text-gray-700 bg-blue-50 p-2 rounded">
+            <strong>Explanation:</strong> {question.explanation}
+          </p>
+        )}
         <div className="flex gap-2 mt-3">
           <button
             className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
