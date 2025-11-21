@@ -7,6 +7,8 @@ import ScrollToTop from "@/components/ScrollToTop";
 import { AuthProvider } from "@/context/AuthContext";
 import "react-datepicker/dist/react-datepicker.css";
 import ToasterContext from '@/app/api/contex/ToasetContex';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 // Thêm dòng này
 
 const font = Poppins({
@@ -26,6 +28,7 @@ export default function RootLayout({
           <AuthProvider> {/* ✅ Thêm AuthProvider ở đây */}
             <Header />
             <ToasterContext />
+            <ToastContainer />
             {children}
             <ScrollToTop />
           </AuthProvider>

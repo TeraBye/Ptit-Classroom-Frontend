@@ -794,26 +794,28 @@ export function RightSidebar() {
         </div>
       </div>
 
-      <Card className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="font-semibold">Assignments</h4>
-          <div className="text-sm text-gray-500">{assignments.length} items</div>
-        </div>
+      {user?.role === 'STUDENT' && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-semibold">Assignments</h4>
+            <div className="text-sm text-gray-500">{assignments.length} items</div>
+          </div>
 
-        {/* Tabs moved into modal to avoid duplication */}
+          {/* Tabs moved into modal to avoid duplication */}
 
-        <div className="text-sm">
-          {assignLoading ? (
-            <div className="text-sm text-gray-500">Loading...</div>
-          ) : (
-            <div className="mb-2 text-gray-600">{assignments.length} assignments</div>
-          )}
-          <button onClick={() => setAssignModalOpen(true)} disabled={assignLoading} className={`w-full px-3 py-2 ${assignLoading ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-blue-600 text-white'} rounded`}>Open assignments</button>
-        </div>
-      </Card>
+          <div className="text-sm">
+            {assignLoading ? (
+              <div className="text-sm text-gray-500">Loading...</div>
+            ) : (
+              <div className="mb-2 text-gray-600">{assignments.length} assignments</div>
+            )}
+            <button onClick={() => setAssignModalOpen(true)} disabled={assignLoading} className={`w-full px-3 py-2 ${assignLoading ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-blue-600 text-white'} rounded`}>Open assignments</button>
+          </div>
+        </Card>
+      )}
 
       {/* Assignments modal (large view) */}
-      {assignModalOpen && (
+      {user?.role === 'STUDENT' && assignModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white w-full max-w-4xl rounded-lg shadow-lg p-4 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between mb-3">

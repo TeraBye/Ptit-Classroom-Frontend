@@ -4,6 +4,8 @@ import QuestionCard from "./QuestionCard";
 interface Question {
   id: number;
   content: string;
+  explanation?: string;
+  level?: string;
   optionA: string;
   optionB: string;
   optionC: string;

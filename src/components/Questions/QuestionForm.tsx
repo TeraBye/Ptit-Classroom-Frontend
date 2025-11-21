@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import QuestionImport from "./QuestionImport";
 
 interface QuestionFormProps {
   initialData: any;
@@ -66,23 +67,23 @@ export default function QuestionForm({
     setLoading(true);
     try {
       await onSubmit(formData);
-      toast.success(
-        initialData?.id
-          ? "Question updated successfully"
-          : "Question created successfully"
-      );
-      setFormData({
-        content: "",
-        optionA: "",
-        optionB: "",
-        optionC: "",
-        optionD: "",
-        correctAnswer: "",
-        explanation: "",
-        level: "EASY",
-      });
+      // Only clear form on successful create (not edit)
+      if (!initialData?.id) {
+        setFormData({
+          content: "",
+          optionA: "",
+          optionB: "",
+          optionC: "",
+          optionD: "",
+          correctAnswer: "",
+          explanation: "",
+          level: "EASY",
+        });
+      }
+      // Toast is handled by parent (page.tsx)
     } catch (error: any) {
-      toast.error(error.message || "Action failed");
+      // Error toast is handled by parent (page.tsx)
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -94,7 +95,7 @@ export default function QuestionForm({
       await onUndo();
       toast.info("Undo successful");
     } catch (error: any) {
-      toast.error(error.message || "Undo failed");
+      toast.error(error.response.data.message || "Action failed");
     } finally {
       setActionLoading(null);
     }
@@ -106,7 +107,7 @@ export default function QuestionForm({
       await onRedo();
       toast.info("Redo successful");
     } catch (error: any) {
-      toast.error(error.message || "Redo failed");
+      toast.error(error.response.data.message || "Action failed");
     } finally {
       setActionLoading(null);
     }
@@ -114,6 +115,9 @@ export default function QuestionForm({
 
   return (
     <>
+      <div className="mb-4">
+        <QuestionImport onImported={() => toast.info('Import job finished or updated')} />
+      </div>
       <form
         className="bg-white shadow-md rounded-lg p-6 space-y-6 border"
         onSubmit={handleSubmit}
@@ -124,11 +128,10 @@ export default function QuestionForm({
             type="button"
             onClick={handleUndo}
             disabled={!canUndo || actionLoading === "undo"}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-              canUndo
-                ? "bg-yellow-500 hover:bg-yellow-600"
-                : "bg-gray-300 cursor-not-allowed"
-            } text-white`}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 ${canUndo
+              ? "bg-yellow-500 hover:bg-yellow-600"
+              : "bg-gray-300 cursor-not-allowed"
+              } text-white`}
           >
             {actionLoading === "undo" && <span className="loader"></span>}
             Undo
@@ -137,11 +140,10 @@ export default function QuestionForm({
             type="button"
             onClick={handleRedo}
             disabled={!canRedo || actionLoading === "redo"}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-              canRedo
-                ? "bg-green-500 hover:bg-green-600"
-                : "bg-gray-300 cursor-not-allowed"
-            } text-white`}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 ${canRedo
+              ? "bg-green-500 hover:bg-green-600"
+              : "bg-gray-300 cursor-not-allowed"
+              } text-white`}
           >
             {actionLoading === "redo" && <span className="loader"></span>}
             Redo
