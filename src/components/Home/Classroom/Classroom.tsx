@@ -190,6 +190,21 @@ const Classroom = () => {
 
   const router = useRouter();
 
+  const studentsTotal = classrooms.reduce(
+    (acc, c) => acc + ((c.classroom?.studentNum ?? c.studentNum) || 0),
+    0
+  );
+
+  const filteredClassrooms = classrooms.filter((c) => {
+    const cls = user?.role === "STUDENT" ? c.classroom ?? c : c;
+    return activeTab === "active" ? !cls.deleted : cls.deleted;
+  });
+
+  const emptyMessage =
+    activeTab === "active"
+      ? "No active classrooms yet."
+      : "No inactive classrooms.";
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       setToken(localStorage.getItem("token") || undefined);
@@ -241,8 +256,16 @@ const Classroom = () => {
 
   useEffect(() => {
     if (showModal && token) {
-      // Lấy danh sách môn học
-      getAllSubjects(token).then(setSubjects);
+      // Lấy danh sách môn học — đảm bảo unwrap `result.content` nếu backend trả wrapper
+      getAllSubjects(token)
+        .then((res: any) => {
+          const content = res?.result?.content ?? res?.content ?? res;
+          setSubjects(Array.isArray(content) ? content : []);
+        })
+        .catch((err: any) => {
+          console.error("Load subjects failed", err);
+          setSubjects([]);
+        });
     }
     // close subject dropdown when clicking outside
     function handleClickOutside(e: MouseEvent) {
@@ -330,7 +353,7 @@ const Classroom = () => {
     <section id="classroom">
       <div className="flex h-screen bg-gray-50 mt-[50px]">
         {/* Sidebar */}
-        <div className="w-1/3 bg-white p-4 overflow-y-auto border-r">
+        <div className="w-1/4 bg-white p-4 overflow-y-auto border-r">
           <h2 className="text-lg font-semibold mb-4">Class</h2>
           {/* Luôn render section[0] */}
           {user?.role === "STUDENT" && (<div className="mb-6">
@@ -394,7 +417,7 @@ const Classroom = () => {
         </div>
 
         {/* Main area */}
-        <div className="flex-1 flex flex-col justify-start items-center text-center px-8 py-8">
+        <div className="flex-1 flex flex-col justify-start items-center text-center px-8 py-8 overflow-y-auto">
           {loading ? (
             <div>Loading...</div>
           ) : classrooms.length === 0 ? (
@@ -411,56 +434,94 @@ const Classroom = () => {
             </div>
           ) : (
             <div>
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setActiveTab('active')} className={`px-3 py-1 rounded ${activeTab === 'active' ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}>Active</button>
-                  <button onClick={() => setActiveTab('inactive')} className={`px-3 py-1 rounded ${activeTab === 'inactive' ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}>Inactive</button>
-                  <div className="text-sm text-gray-500 ml-4">Total: {classrooms.length}</div>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setActiveTab("active")}
+                    className={`px-3 py-1 rounded ${
+                      activeTab === "active"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-100"
+                    }`}
+                  >
+                    Active
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("inactive")}
+                    className={`px-3 py-1 rounded ${
+                      activeTab === "inactive"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-100"
+                    }`}
+                  >
+                    Inactive
+                  </button>
+                  <div className="text-sm text-gray-500 ml-4">
+                    Total: {classrooms.length}
+                  </div>
                 </div>
-                <div className="text-sm text-gray-500">Students total: {classrooms.reduce((acc, c) => acc + ((c.classroom?.studentNum ?? c.studentNum) || 0), 0)}</div>
+                <div className="text-sm text-gray-500">
+                  Students total: {studentsTotal}
+                </div>
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {classrooms.filter(c => {
-                  const cls = user?.role === 'STUDENT' ? c.classroom ?? c : c;
-                  return activeTab === 'active' ? !cls.deleted : cls.deleted;
-                }).map((c) => {
-                  const classroom = user?.role === 'STUDENT' ? c.classroom ?? c : c;
-                  return (
-                    <ClassCard
-                      key={classroom.id}
-                      classroom={classroom}
-                      currentRole={user?.role}
-                      onEdit={(cls) => {
-                        setEditingClass(cls);
-                        setEditOpen(true);
-                      }}
-                      onActivate={async (id) => {
-                        try {
-                          // Assumption: endpoint to restore is PATCH /classrooms/{id}/restore
-                          await axiosInstance.patch(`/classrooms/${id}/restore`);
-                          // update local state: mark deleted = false
-                          setClassrooms(prev => prev.map(item => {
-                            const cls = (item as any).classroom ?? item;
-                            if (cls && cls.id === id) {
-                              const updated = { ...cls, deleted: false };
-                              if ((item as any).classroom) return { ...(item as any), classroom: updated };
-                              return updated as any;
-                            }
-                            return item;
-                          }));
-                        } catch (err) {
-                          console.error(err);
-                          toastError(getErrorMessage(err));
-                        }
-                      }}
-                      onDelete={(id) => {
-                        setPendingDelete(id);
-                        setConfirmOpen(true);
-                      }}
-                    />
-                  );
-                })}
+                {filteredClassrooms.length === 0 ? (
+                  <div className="col-span-full rounded-lg border border-dashed bg-white py-10 text-center text-gray-500">
+                    {emptyMessage}
+                  </div>
+                ) : (
+                  filteredClassrooms.map((c) => {
+                    const classroom =
+                      user?.role === "STUDENT" ? c.classroom ?? c : c;
+                    return (
+                      <ClassCard
+                        key={classroom.id}
+                        classroom={classroom}
+                        currentRole={user?.role}
+                        onEdit={(cls) => {
+                          setEditingClass(cls);
+                          setEditOpen(true);
+                        }}
+                        onActivate={async (id) => {
+                          try {
+                            await axiosInstance.patch(
+                              `/classrooms/${id}/restore`
+                            );
+                            setClassrooms((prev) =>
+                              prev.map((item) => {
+                                const cls =
+                                  (item as any).classroom ?? item;
+                                if (cls && cls.id === id) {
+                                  const updated = {
+                                    ...cls,
+                                    deleted: false,
+                                  };
+                                  if ((item as any).classroom)
+                                    return {
+                                      ...(item as any),
+                                      classroom: updated,
+                                    };
+                                  return updated as any;
+                                }
+                                return item;
+                              })
+                            );
+                          } catch (err) {
+                            console.error(err);
+                            toastError(getErrorMessage(err));
+                          }
+                        }}
+                        onDelete={(id) => {
+                          setPendingDelete(id);
+                          setConfirmOpen(true);
+                        }}
+                      />
+                    );
+                  })
+                )}
               </div>
+
               <div className="flex justify-center mt-4 gap-2">
                 <button
                   disabled={page === 0}

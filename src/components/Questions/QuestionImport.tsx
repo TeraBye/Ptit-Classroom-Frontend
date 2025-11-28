@@ -7,9 +7,15 @@ import { toast } from "react-toastify";
 
 type Props = {
     onImported?: (result?: any) => void;
+    onRefreshData?: () => Promise<void> | void;
 };
 
-export default function QuestionImport({ onImported }: Props) {
+// Timeout configuration
+const MAX_POLLING_TIME = 5 * 60 * 1000; // 5 minutes in milliseconds
+const POLLING_INTERVAL = 2000; // 2 seconds
+const MAX_POLL_ATTEMPTS = Math.floor(MAX_POLLING_TIME / POLLING_INTERVAL); // 150 attempts
+
+export default function QuestionImport({ onImported, onRefreshData }: Props) {
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const [jobId, setJobId] = useState<number | null>(null);
@@ -17,43 +23,142 @@ export default function QuestionImport({ onImported }: Props) {
     const [subjects, setSubjects] = useState<any[]>([]);
     const [showSubjects, setShowSubjects] = useState(false);
     const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+    const [elapsedTime, setElapsedTime] = useState<number>(0);
     const pollRef = useRef<number | null>(null);
+    const timeoutRef = useRef<number | null>(null);
+    const pollStartTimeRef = useRef<number | null>(null);
+    const pollAttemptsRef = useRef<number>(0);
+    const elapsedTimeRef = useRef<number | null>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const f = e.target.files?.[0] ?? null;
         setFile(f);
     };
 
+    const stopPolling = () => {
+        if (pollRef.current) {
+            window.clearInterval(pollRef.current);
+            pollRef.current = null;
+        }
+        if (timeoutRef.current) {
+            window.clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+        if (elapsedTimeRef.current) {
+            window.clearInterval(elapsedTimeRef.current);
+            elapsedTimeRef.current = null;
+        }
+        pollStartTimeRef.current = null;
+        pollAttemptsRef.current = 0;
+        setElapsedTime(0);
+    };
+
+    const handleCancelImport = () => {
+        stopPolling();
+        setUploading(false);
+        setJobId(null);
+        setJobStatus(null);
+        toast.info("Stopped tracking import. You can check the status in the backend.");
+    };
+
     const startPolling = (id: number) => {
-        // poll every 2s
-        if (pollRef.current) window.clearInterval(pollRef.current);
+        // Stop any existing polling
+        stopPolling();
+
+        // Reset tracking variables
+        pollStartTimeRef.current = Date.now();
+        pollAttemptsRef.current = 0;
+        setElapsedTime(0);
+
+        // Start elapsed time counter
+        elapsedTimeRef.current = window.setInterval(() => {
+            if (pollStartTimeRef.current) {
+                const elapsed = Math.floor((Date.now() - pollStartTimeRef.current) / 1000);
+                setElapsedTime(elapsed);
+            }
+        }, 1000);
+
+        // Set timeout to stop polling after MAX_POLLING_TIME
+        timeoutRef.current = window.setTimeout(() => {
+            stopPolling();
+            setUploading(false);
+            setJobId(null);
+            toast.warning(
+                `Import is taking too long (${MAX_POLLING_TIME / 1000 / 60} minutes). ` +
+                `Please check the import status in the backend or try again later.`
+            );
+            setJobStatus((prev: any) => ({
+                ...prev,
+                status: "TIMEOUT",
+                message: "Import timeout - processing took too long"
+            }));
+        }, MAX_POLLING_TIME);
+
+        // Start polling every 2s
         pollRef.current = window.setInterval(async () => {
             try {
+                pollAttemptsRef.current += 1;
+
+                // Check if we've exceeded max attempts
+                if (pollAttemptsRef.current > MAX_POLL_ATTEMPTS) {
+                    stopPolling();
+                    setUploading(false);
+                    setJobId(null);
+                    toast.warning(
+                        `Import has reached the maximum number of checks (${MAX_POLL_ATTEMPTS} times). ` +
+                        `Please check the import status in the backend.`
+                    );
+                    setJobStatus((prev: any) => ({
+                        ...prev,
+                        status: "TIMEOUT",
+                        message: "Import timeout - exceeded max polling attempts"
+                    }));
+                    return;
+                }
+
                 const res = await axiosInstance.get(`${API_BASE_URL}/imports/jobs/${id}`);
                 const data = res.data?.result;
                 setJobStatus(data);
                 const status = String(data?.status || "").toUpperCase();
+                
                 // Treat common terminal states from backend as completion
                 const terminal = new Set(["COMPLETED", "FAILED", "SUCCESS", "DONE", "ERROR"]);
                 if (terminal.has(status)) {
-                    if (pollRef.current) {
-                        window.clearInterval(pollRef.current);
-                        pollRef.current = null;
-                    }
+                    stopPolling();
                     setUploading(false);
                     setJobId(null);
-                    if (status === "SUCCESS") {
-                        toast.success("Import completed");
+                    
+                    if (status === "SUCCESS" || status === "COMPLETED" || status === "DONE") {
+                        toast.success("Import successful!");
+                        
+                        // Fetch lại dữ liệu mới khi import thành công
+                        if (onRefreshData) {
+                            try {
+                                await onRefreshData();
+                            } catch (err) {
+                                console.error("Failed to refresh data after import", err);
+                                toast.warning("Import successful but unable to reload data. Please refresh the page.");
+                            }
+                        }
+                        
                         onImported?.(data);
                     } else {
-                        toast.error("Import failed");
+                        const errorMessage = data?.message || "Import failed";
+                        toast.error(`Import failed: ${errorMessage}`);
                         onImported?.(data);
                     }
                 }
             } catch (err: any) {
                 console.error("Error polling job", err);
+                // If we get consistent errors, stop polling after some attempts
+                if (pollAttemptsRef.current > 10) {
+                    stopPolling();
+                    setUploading(false);
+                    setJobId(null);
+                    toast.error("Unable to check import status. Please check again later.");
+                }
             }
-        }, 2000) as unknown as number;
+        }, POLLING_INTERVAL) as unknown as number;
     };
 
     const handleUpload = async () => {
@@ -106,10 +211,7 @@ export default function QuestionImport({ onImported }: Props) {
 
     useEffect(() => {
         return () => {
-            if (pollRef.current) {
-                window.clearInterval(pollRef.current);
-                pollRef.current = null;
-            }
+            stopPolling();
         };
     }, []);
 
@@ -185,10 +287,53 @@ export default function QuestionImport({ onImported }: Props) {
             </div>
 
             {jobStatus && (
-                <div className="mt-3 text-sm">
-                    <div>Status: <strong>{jobStatus.status}</strong></div>
-                    {jobStatus.total && <div>Processed: {jobStatus.processed}/{jobStatus.total}</div>}
-                    {jobStatus.message && <div className="text-gray-600">{jobStatus.message}</div>}
+                <div className="mt-3 p-3 bg-gray-50 rounded text-sm">
+                    <div className="flex justify-between items-center mb-2">
+                        <div>
+                            <span className="font-semibold">Status: </span>
+                            <strong className={`${
+                                jobStatus.status === "SUCCESS" || jobStatus.status === "COMPLETED" || jobStatus.status === "DONE"
+                                    ? "text-green-600"
+                                    : jobStatus.status === "FAILED" || jobStatus.status === "ERROR" || jobStatus.status === "TIMEOUT"
+                                    ? "text-red-600"
+                                    : "text-blue-600"
+                            }`}>{jobStatus.status}</strong>
+                        </div>
+                        {uploading && (
+                            <button
+                                onClick={handleCancelImport}
+                                className="px-2 py-1 text-xs bg-red-500 hover:bg-red-600 text-white rounded"
+                            >
+                                Stop tracking
+                            </button>
+                        )}
+                    </div>
+                    {jobStatus.total && (
+                        <div className="mb-1">
+                            <span>Processed: </span>
+                            <strong>{jobStatus.processed || 0}/{jobStatus.total}</strong>
+                            {jobStatus.total > 0 && (
+                                <span className="text-gray-500 ml-2">
+                                    ({Math.round(((jobStatus.processed || 0) / jobStatus.total) * 100)}%)
+                                </span>
+                            )}
+                        </div>
+                    )}
+                    {uploading && elapsedTime > 0 && (
+                        <div className="mb-1 text-gray-600">
+                            <span>Elapsed time: </span>
+                            <strong>{Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}</strong>
+                            <span className="text-xs ml-2">(Max: {Math.floor(MAX_POLLING_TIME / 60000)} minutes)</span>
+                        </div>
+                    )}
+                    {jobStatus.message && (
+                        <div className="text-gray-600 mt-1 italic">{jobStatus.message}</div>
+                    )}
+                    {jobStatus.status === "TIMEOUT" && (
+                        <div className="mt-2 p-2 bg-yellow-100 border border-yellow-400 rounded text-yellow-800 text-xs">
+                            ⚠️ Import has exceeded the wait time. Please check the status in the backend or try again later.
+                        </div>
+                    )}
                 </div>
             )}
         </div>

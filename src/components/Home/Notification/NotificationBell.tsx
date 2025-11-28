@@ -1,140 +1,186 @@
 "use client";
-import { API_BASE_URL, getMyInfo } from "@/app/api/libApi/api";
+import { getMyInfo } from "@/app/api/libApi/api";
 import axiosInstance from "@/utils/axiosInstance";
 import { Bell } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 
 interface Notification {
-  receiverUsername: string;
+  id?: string;
+  senderUsername?: string;
   content: string;
-  timeStamp: string;
-  senderUsername: string;
-  isRead: boolean
+  avatar?: string | null;
+  timestamp?: any;
+  isRead?: boolean;
 }
 
 export default function NotificationBell() {
   const [count, setCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
-  const [token, setToken] = useState<string | undefined>(undefined);
-  const [username, setUsername] = useState<string>("");
-  const wsRef = useRef<WebSocket | null>(null);
+  const [username, setUsername] = useState("");
+  const clientRef = useRef<Client | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const hasMarkedAllRead = useRef(false);
 
+  // Lấy username
   useEffect(() => {
-    const fetchUserInfo = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      setToken(token);
-      try {
-        const res = await getMyInfo(token);
-        setUsername(res.username);
-      } catch (err) {
-        console.error("Failed to fetch user info", err);
-      }
-    };
-    fetchUserInfo();
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    getMyInfo(token)
+      .then(res => setUsername(res.username))
+      .catch(() => { });
   }, []);
 
-  // Fetch thông báo cũ
+  // Load thông báo cũ
   useEffect(() => {
-    async function fetchNotifications() {
+    if (!username) return;
+
+    const load = async () => {
       try {
-        const res = await axiosInstance.get(`${API_BASE_URL}/notifications/${username}`);
-
-        const data: Notification[] = res.data.result;
-
+        const res = await axiosInstance.get(`/notifications/${username}`);
+        const data = (res.data.result || []).map((n: any) => ({
+          id: n.id || n._id,
+          senderUsername: n.senderUsername,
+          content: n.content,
+          timestamp: n.timestamp || n.timeStamp,
+          avatar: n.avatar || n.avatarUrl || null,
+          isRead: !!n.isRead,
+        }));
         setNotifications(data);
-        const unread = data.filter((n) => !n.isRead).length;
-        setCount(unread);
-      } catch (error) {
-        console.error("Error loading notifications", error);
+        setCount(data.filter((n: any) => !n.isRead).length);
+      } catch (err) {
+        console.error("Load notifications failed", err);
       }
-    }
+    };
+    load();
+  }, [username]);
 
-    if (username && token) {
-      fetchNotifications();
-    }
-  }, [username, token]);
-
-
+  // Handle click outside to close dropdown
   useEffect(() => {
-    const ws = new WebSocket(`${API_BASE_URL}/notifications/ws`);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log("Connected to WebSocket");
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
     };
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data) as Notification;
-      setNotifications((prev) => [data, ...prev]);
-      setCount((prev) => prev + 1);
-    };
-
-    ws.onclose = () => {
-      console.log("WebSocket closed");
-    };
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
 
     return () => {
-      ws.close();
+      document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [open]);
 
-  const handleToggle = () => {
-    setOpen((prev) => !prev);
+  // REALTIME – ĐÃ FIX ĐÚNG URL
+  useEffect(() => {
+    if (!username) return;
+
+    // Build absolute WS endpoint (ensure protocol present)
+    const wsUrl = `${window.location.protocol}//${window.location.hostname}:8090/api/notifications/ws`;
+
+    const client = new Client({
+      // Use SockJS factory since backend registers SockJS endpoint
+      webSocketFactory: () => new SockJS(wsUrl),
+      reconnectDelay: 5000,
+      debug: (str) => console.log("[STOMP]", str),
+    });
+
+    // (click-outside logic moved to top-level effect)
+
+    client.onConnect = () => {
+      console.log("Realtime connected! → /topic/notifications/" + username);
+      client.subscribe(`/topic/notifications/${username}`, (msg) => {
+        const data = JSON.parse(msg.body);
+        const noti: Notification = {
+          senderUsername: data.senderUsername || "Unknown",
+          content: data.content || "New notification",
+          timestamp: data.timestamp || data.timeStamp || new Date(),
+          avatar: data.avatar || "https://ui-avatars.com/api/?name=New+Notification&background=0D8ABC&color=fff",
+          isRead: false,
+        };
+        setNotifications(prev => [noti, ...prev]);
+        setCount(c => c + 1);
+      });
+    };
+
+    client.onStompError = (frame) => console.error("STOMP Error:", frame);
+
+    client.activate();
+    clientRef.current = client;
+
+    return () => { client.deactivate(); };
+  }, [username]);
+
+  // BEST PRACTICE: Mở chuông = đã đọc hết (không cần click từng cái)
+  const handleToggle = async () => {
+    if (!open && count > 0 && !hasMarkedAllRead.current) {
+      hasMarkedAllRead.current = true;
+      try {
+        await axiosInstance.post(`/notifications/read-all?username=${username}`);
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setCount(0);
+      } catch (err) {
+        hasMarkedAllRead.current = false;
+        console.error("Mark all readfailed", err);
+      }
+    }
+    setOpen(!open);
   };
 
-//   const handleMarkAsRead = async (id: string) => {
-//   try {
-//     await axiosInstance.put(`${API_BASE_URL}/notification/read/${id}`, {}, {
-//       headers: {
-//         Authorization: `Bearer ${token}`,
-//       },
-//     });
-
-//     setNotifications((prev) =>
-//       prev.map((n) =>
-//         n.id === id ? { ...n, isRead: true } : n
-//       )
-//     );
-//     setCount((prev) => Math.max(prev - 1, 0));
-//   } catch (error) {
-//     console.error("Error marking as read", error);
-//   }
-// };
+  const formatTime = (ts: any) => {
+    if (!ts) return "h";
+    if (ts.seconds) return new Date(ts.seconds * 1000).toLocaleString("vi-VN");
+    return new Date(ts).toLocaleString("vi-VN");
+  };
 
   return (
     <div className="relative">
       <button
-        className="relative p-2 rounded-full hover:bg-gray-200"
         onClick={handleToggle}
+        className="relative p-2 hover:bg-gray-200 rounded-full transition"
       >
-        <Bell className="text-black" size={20} />
+        <Bell size={24} className="text-gray-700" />
         {count > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-            {count}
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+            {count > 99 ? "99+" : count}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 bg-white shadow-lg rounded-lg z-50 max-h-96 overflow-y-auto">
+        <div
+          ref={dropdownRef}
+          className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-2xl border z-50 max-h-96 overflow-y-auto">
+          <div className="p-4 font-bold border-b text-lg">Notification</div>
           {notifications.length === 0 ? (
-            <p className="p-4 text-gray-500 text-sm">No notifications</p>
+            <p className="p-8 text-center text-gray-500">No notifications</p>
           ) : (
             <ul>
-              {notifications.map((n) => (
+              {notifications.map((n, i) => (
                 <li
-                  // key={n.id}
-                  className={`p-3 border-b cursor-pointer ${
-                    n.isRead ? "bg-white text-gray-700" : "bg-gray-100 font-semibold"
-                  } hover:bg-gray-200`}
-                  // onClick={() => handleMarkAsRead(n.id)}
+                  key={i}
+                  className={`p-4 border-b flex gap-3 hover:bg-gray-50 transition ${!n.isRead ? "bg-blue-50" : "bg-white"
+                    }`}
                 >
-                  <p>{n.content}</p>
-                  <div className="text-xs text-gray-400 mt-1">
-                    {new Date(n.timeStamp).toLocaleString()}
+                  <img
+                    src={n.avatar || '/images/logo/avatar-fallback.png'}
+                    alt={n.senderUsername || 'avatar'}
+                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                    onError={(e: any) => {
+                      e.currentTarget.onerror = null; // tránh loop
+                      e.currentTarget.src = '/images/logo/avatar-fallback.png';
+                    }}
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm">
+                      <strong>{n.senderUsername}</strong> {n.content}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">{formatTime(n.timestamp)}</p>
                   </div>
+                  {!n.isRead && <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>}
                 </li>
               ))}
             </ul>

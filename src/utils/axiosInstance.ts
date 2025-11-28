@@ -1,8 +1,9 @@
 import axios from "axios";
-import { API_BASE_URL } from "@/app/api/libApi/api";
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8888/api";
 
 const axiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },

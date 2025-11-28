@@ -3,42 +3,42 @@ import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
-    UserIcon,
-    EllipsisVerticalIcon,
-    PencilSquareIcon,
-    TrashIcon,
-    DocumentTextIcon,
+  UserIcon,
+  EllipsisVerticalIcon,
+  PencilSquareIcon,
+  TrashIcon,
+  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from '@/components/ui/button';
 import { Badge } from "@/components/ui/badge"
 
 interface ClassCardProps {
-    classroom: any;
-    onDelete?: (id: number) => Promise<void> | void;
-    onEdit?: (cls: any) => void;
-    onActivate?: (id: number) => Promise<void> | void;
-    currentRole?: 'TEACHER' | 'STUDENT' | string;
+  classroom: any;
+  onDelete?: (id: number) => Promise<void> | void;
+  onEdit?: (cls: any) => void;
+  onActivate?: (id: number) => Promise<void> | void;
+  currentRole?: 'TEACHER' | 'STUDENT' | string;
 }
 
 export default function ClassCard({ classroom, onDelete, onEdit, onActivate, currentRole }: ClassCardProps) {
-    const router = useRouter();
-    const [openMenu, setOpenMenu] = useState(false);
-    const menuRef = useRef<HTMLDivElement | null>(null);
-    const isActive = !classroom.deleted;
+  const router = useRouter();
+  const [openMenu, setOpenMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const isActive = !classroom.deleted;
 
-    useEffect(() => {
-        function handleClickOutside(e: MouseEvent) {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-                setOpenMenu(false);
-            }
-        }
-        if (openMenu) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [openMenu]);
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenu(false);
+      }
+    }
+    if (openMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openMenu]);
 
-    return (
+  return (
     <div className={`w-64 bg-white rounded-lg overflow-hidden shadow-md border ${isActive ? "" : "opacity-60"}`}>
       <div className="relative">
         <Image
@@ -59,7 +59,7 @@ export default function ClassCard({ classroom, onDelete, onEdit, onActivate, cur
               <EllipsisVerticalIcon className="w-5 h-5 text-gray-600" />
             </button>
             {openMenu && (
-              <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow z-20">
+              <div className="absolute right-0 mt-2 w-48 bg-white border rounded shadow z-20">
                 <button
                   className="flex items-center gap-2 w-full px-3 py-2 hover:bg-gray-50"
                   onClick={() => {
@@ -69,6 +69,7 @@ export default function ClassCard({ classroom, onDelete, onEdit, onActivate, cur
                 >
                   <PencilSquareIcon className="w-4 h-4" /> Edit
                 </button>
+
                 {!isActive ? (
                   <button
                     className="flex items-center gap-2 w-full px-3 py-2 text-green-600 hover:bg-gray-50"
