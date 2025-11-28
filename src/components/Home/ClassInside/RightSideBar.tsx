@@ -10,6 +10,7 @@ import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { toastError, toastSuccess } from '@/utils';
 import { SubmitModal } from "@/components/Home/ClassInside/SubmitModal";
+import JoinRequestSidebar from "@/components/Home/JoinRequest/JoinRequestSidebar";
 
 // Modal review exam after create  
 function ReviewExamModal({ open, onClose, examData }: {
@@ -548,6 +549,8 @@ export function RightSidebar() {
   const [submitAssign, setSubmitAssign] = useState<any | null>(null);
   const [submittedData, setSubmittedData] = useState<any | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [showJoinRequests, setShowJoinRequests] = useState(false);
+  const [isPrivateClassroom, setIsPrivateClassroom] = useState(false);
 
   const params = useParams();
   const id = params.classId;
@@ -568,6 +571,44 @@ export function RightSidebar() {
 
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (user && user.role !== "TEACHER" && showJoinRequests) {
+      setShowJoinRequests(false);
+    }
+  }, [user, showJoinRequests]);
+
+  useEffect(() => {
+    if (!isPrivateClassroom && showJoinRequests) {
+      setShowJoinRequests(false);
+    }
+  }, [isPrivateClassroom, showJoinRequests]);
+
+  useEffect(() => {
+    const fetchClassroomInfo = async () => {
+      if (!id) return;
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axiosInstance.get(
+          `/classrooms/${id}`,
+          { headers: token ? { Authorization: `Bearer ${token}` } : undefined }
+        );
+        const cls = res.data?.result ?? res.data ?? null;
+        const privateFlag =
+          typeof cls?.public !== "undefined"
+            ? !cls.public
+            : typeof cls?.isPublic !== "undefined"
+              ? !cls.isPublic
+              : false;
+        setIsPrivateClassroom(privateFlag);
+      } catch (err) {
+        console.error("Error loading classroom info:", err);
+        setIsPrivateClassroom(false);
+      }
+    };
+
+    fetchClassroomInfo();
+  }, [id]);
 
   // load student assignments for this classroom (only for STUDENT role)
   useEffect(() => {
@@ -794,6 +835,22 @@ export function RightSidebar() {
         </div>
       </div>
 
+      {user?.role === "TEACHER" && isPrivateClassroom && (
+        <Card className="p-4">
+          <h4 className="font-semibold mb-2">Join requests</h4>
+          <p className="text-sm text-gray-500 mb-3">
+            Review who wants to join this classroom and approve or reject them.
+          </p>
+          <button
+            className="w-full px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+            disabled={!user?.username}
+            onClick={() => setShowJoinRequests(true)}
+          >
+            Manage requests
+          </button>
+        </Card>
+      )}
+
       {user?.role === 'STUDENT' && (
         <Card className="p-4">
           <div className="flex items-center justify-between mb-3">
@@ -812,6 +869,15 @@ export function RightSidebar() {
             <button onClick={() => setAssignModalOpen(true)} disabled={assignLoading} className={`w-full px-3 py-2 ${assignLoading ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-blue-600 text-white'} rounded`}>Open assignments</button>
           </div>
         </Card>
+      )}
+
+      {isPrivateClassroom && (
+        <JoinRequestSidebar
+          classroomId={id ? Number(id) : null}
+          show={showJoinRequests}
+          onClose={() => setShowJoinRequests(false)}
+          username={user?.username || null}
+        />
       )}
 
       {/* Assignments modal (large view) */}

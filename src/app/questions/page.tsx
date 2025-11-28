@@ -366,6 +366,7 @@ export default function Page() {
                   canUndo={canUndo}
                   canRedo={canRedo}
                   onCancel={() => setEditingQuestion(null)}
+                  onRefreshData={refreshQuestions}
                 />
               </div>
             </div>
