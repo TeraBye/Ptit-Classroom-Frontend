@@ -367,7 +367,7 @@ function NewExamModal({
   open: boolean;
   onClose: () => void;
   teacherId: string;
-  onExamCreated: (data: any) => void;
+  onExamCreated: (data: any) => void; 
 }) {
   const [subjects, setSubjects] = useState<{ id: number; name: string }[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
@@ -378,30 +378,49 @@ function NewExamModal({
   const params = useParams();
 
   useEffect(() => {
-    if (!open) return;
+    console.log("🔍 useEffect triggered - open:", open, "teacherId:", teacherId);
+    
+    if (!open || !teacherId) {
+      console.log("❌ Exiting early - open:", open, "teacherId:", teacherId);
+      return;
+    }
 
     const fetchSubjects = async () => {
       try {
         const token = localStorage.getItem("token");
-        if (!token) return;
+        if (!token) {
+          console.log("❌ No token found");
+          return;
+        }
 
-        const res = await fetch("http://localhost:8888/api/classrooms/subjects", {
+        const url = `http://localhost:8888/api/classrooms/subjects?username=${teacherId}`;
+        console.log("🚀 Calling API:", url);
+
+        const res = await fetch(url, {
           headers: {
             "Authorization": `Bearer ${token}`,
           },
         });
 
+        console.log("📥 Response status:", res.status);
         const data = await res.json();
+        console.log("📦 Response data:", data);
+        
         if (data.code === 0) {
-          setSubjects(data.result);
+          const subjectList = data.result?.content || data.result || [];
+          setSubjects(Array.isArray(subjectList) ? subjectList : []);
+          console.log("✅ Subjects set:", subjectList);
+        } else {
+          console.log("⚠️ API returned code:", data.code);
         }
       } catch (error) {
-        console.error("Error fetching subjects:", error);
+        console.error("❌ Error fetching subjects:", error);
+        setSubjects([]);
       }
     };
 
     fetchSubjects();
-  }, [open]);
+  }, [open, teacherId]);
 
   const handleCreateExam = async () => {
 
@@ -500,7 +519,7 @@ function NewExamModal({
             onChange={(e) => setSelectedSubjectId(Number(e.target.value))}
           >
             <option value="">Select subject</option>
-            {subjects.map((subj) => (
+            {(Array.isArray(subjects) ? subjects : []).map((subj) => (
               <option key={subj.id} value={subj.id}>
                 {subj.name}
               </option>
