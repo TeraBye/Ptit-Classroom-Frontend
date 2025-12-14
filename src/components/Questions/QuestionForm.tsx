@@ -11,7 +11,6 @@ interface QuestionFormProps {
   canUndo: boolean;
   canRedo: boolean;
   onCancel: () => void;
-  onRefreshData?: () => Promise<void> | void;
 }
 
 export default function QuestionForm({
@@ -22,7 +21,6 @@ export default function QuestionForm({
   canUndo,
   canRedo,
   onCancel,
-  onRefreshData,
 }: QuestionFormProps) {
   const [formData, setFormData] = useState({
     content: "",
@@ -118,10 +116,7 @@ export default function QuestionForm({
   return (
     <>
       <div className="mb-4">
-        <QuestionImport 
-          onImported={() => toast.info('Import job finished or updated')} 
-          onRefreshData={onRefreshData}
-        />
+        <QuestionImport onImported={() => toast.info('Import job finished or updated')} />
       </div>
       <form
         className="bg-white shadow-md rounded-lg p-6 space-y-6 border"
