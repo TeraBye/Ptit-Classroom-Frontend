@@ -27,6 +27,7 @@ export default function LoggedInNav() {
   const { setIsAuthenticated } = useAuth();
   const [token, setToken] = useState<string | undefined>(undefined);
   const [user, setUser] = useState<any>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const router = useRouter();
 
@@ -39,10 +40,20 @@ export default function LoggedInNav() {
   useEffect(() => {
     if (token) {
       getMyInfo(token).then((user) => {
-        setUser(user); // user.role sẽ có giá trị "TEACHER" hoặc "STUDENT"
+        setUser(user);
       });
     }
-  }, [token]);
+  }, [token, refreshTrigger]);
+
+  // Listen for avatar update event from ProfileForm
+  useEffect(() => {
+    const handleAvatarUpdate = () => {
+      setRefreshTrigger(prev => prev + 1);
+    };
+
+    window.addEventListener("avatar-updated", handleAvatarUpdate);
+    return () => window.removeEventListener("avatar-updated", handleAvatarUpdate);
+  }, []);
 
   const handleLogout = async () => {
     setIsLoading(true);
@@ -80,15 +91,15 @@ export default function LoggedInNav() {
         <Grid className="text-black" size={20} />
       </button>
 
-      <button className="p-2 rounded-full hover:bg-gray-200" 
-      onClick={() => router.push("/chat")}>
+      <button className="p-2 rounded-full hover:bg-gray-200"
+        onClick={() => router.push("/chat")}>
         <MessageSquare className="text-black" size={20} />
       </button>
 
       {/* <button className="p-2 rounded-full hover:bg-gray-200">
         <Bell className="text-black" size={20} />
       </button> */}
-      <NotificationBell/>
+      <NotificationBell />
 
       <div className="relative">
         <button
@@ -109,7 +120,7 @@ export default function LoggedInNav() {
             <div className="p-4 border-b">
               <div className="flex items-center gap-3">
                 <Image
-                  src= {user?.avatar || "https://i.pinimg.com/736x/54/a0/02/54a0026d53823a3556d7b333da079389.jpg"}
+                  src={user?.avatar || "https://i.pinimg.com/736x/54/a0/02/54a0026d53823a3556d7b333da079389.jpg"}
                   alt="Avatar"
                   width={40}
                   height={40}
@@ -121,7 +132,7 @@ export default function LoggedInNav() {
                 </div>
               </div>
               <button className="mt-3 w-full py-2 bg-gray-100 rounded text-center hover:bg-gray-200"
-              onClick={()=>router.push(`/profile/${user?.username}`)}>
+                onClick={() => router.push(`/profile/${user?.username}`)}>
                 View profile
               </button>
             </div>
@@ -156,6 +167,11 @@ export default function LoggedInNav() {
                   </button>
                   <button className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2">
                     <Users size={20} /> Students
+                  </button>
+                  <button className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+                    onClick={() => router.push("/audit-log")}
+                  >
+                    <ClipboardCheck size={20} /> Audit Log
                   </button>
                 </>
               )}

@@ -30,6 +30,10 @@ export default function ProfilePage() {
       await axiosInstance.put(`/profile/users/update-profile`, updatedData);
       // refetch to get any server-side normalized fields
       await fetchUser();
+      // Notify app/navbar to refresh user info (avatar updated)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('avatar-updated'));
+      }
     } catch (error) {
       console.error(error);
     }

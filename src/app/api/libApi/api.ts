@@ -68,3 +68,24 @@ export async function getStudentClasses(
   });
   return res.data.result;
 }
+
+export async function getAuditLogs(
+  username: string,
+  page = 0,
+  size = 10,
+  sort: "asc" | "desc" = "desc",
+  token?: string
+) {
+  try {
+    const res = await axiosInstance.get(
+      `/logs/?page=${page}&size=${size}&sort=createdAt,${sort}&username=${username}`,
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      }
+    );
+    return res.data.result;
+  } catch (error: any) {
+    toast.error("Failed to load audit logs");
+    return { content: [], totalPages: 0, totalElements: 0 };
+  }
+}
