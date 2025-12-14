@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useLayoutEffect } from "react";
 import { LeftSidebar } from "./LeftSideBar";
 import { CenterContent } from "./Center";
 import { RightSidebar } from "./RightSideBar";
@@ -74,10 +74,18 @@ export default function UserProfileCard() {
     };
   }, [id]);
 
+  // Prevent body scroll
+  useLayoutEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, []);
+
   return (
-    <div className="flex flex-col md:flex-row gap-6 p-6 mt-20 h-screen">
+    <div className="flex flex-col md:flex-row gap-6 p-6 mt-20 pt-32 h-screen overflow-hidden">
       <LeftSidebar />
-      <div className="flex-1 overflow-y-auto flex flex-col gap-4">
+      <div className="flex-1 overflow-y-auto flex flex-col gap-4 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {/* Persistent student list button so teacher can open it even if there are no posts */}
         <div className="flex justify-end mb-3 mt-5">
           <button

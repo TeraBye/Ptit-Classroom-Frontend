@@ -6,6 +6,7 @@ import {
   WifiIcon,
   PlusIcon,
   MagnifyingGlassIcon,
+  BookOpenIcon,
 } from "@heroicons/react/24/outline";
 import ClassCard from "./ClassCard";
 import {
@@ -350,34 +351,37 @@ const Classroom = () => {
   };
 
   return (
-    <section id="classroom">
-      <div className="flex h-screen bg-gray-50 mt-[50px]">
+    <section id="classroom" className="flex bg-gray-50 min-h-full">
+      <div className="flex bg-gray-50 pt-24">
         {/* Sidebar */}
-        <div className="w-1/4 bg-white p-4 overflow-y-auto border-r">
-          <h2 className="text-lg font-semibold mb-4">Class</h2>
+        <div className="w-1/4 bg-gradient-to-b from-blue-50 to-white p-6 overflow-y-auto border-r border-gray-200 shadow-lg">
+          <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-2 flex items-center gap-2">
+            <BookOpenIcon className="w-5 h-5 text-blue-500" />
+            Class Dashboard
+          </h2>
           {/* Luôn render section[0] */}
-          {user?.role === "STUDENT" && (<div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-semibold">{sections[0].title}</h3>
-              <button className="text-gray-400 hover:text-gray-600">▼</button>
+          {user?.role === "STUDENT" && (<div className="mb-6 bg-white rounded-lg p-4 shadow-md border">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-semibold text-gray-800">{sections[0].title}</h3>
+              <button className="text-gray-400 hover:text-gray-600 transition">▼</button>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {sections[0].lessons.map((lesson, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
+                <div key={index} className="flex items-center gap-3 text-sm p-2 rounded hover:bg-gray-50 transition">
                   {getIcon(lesson.type)}
-                  <span>{lesson.title}</span>
+                  <span className="text-gray-700">{lesson.title}</span>
                 </div>
               ))}
             </div>
-            <div className="flex gap-2 mt-3">
+            <div className="flex flex-col gap-2 mt-4">
               <button
-                className="flex items-center gap-1 text-blue-600 hover:underline"
+                className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
                 onClick={() => setShowJoinModal(true)}
               >
                 <PlusIcon className="w-4 h-4" />
                 Use your code
               </button>
-              <button className="flex items-center gap-1 text-gray-600 hover:underline">
+              <button className="flex items-center gap-2 px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
                 <MagnifyingGlassIcon className="w-4 h-4" />
                 Search classroom
               </button>
@@ -387,27 +391,27 @@ const Classroom = () => {
           {/* Chỉ render section[1] và nút tạo lớp nếu là TEACHER */}
           {user?.role === "TEACHER" && (
             <>
-              <div className="mb-6">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold">{sections[1].title}</h3>
-                  <button className="text-gray-400 hover:text-gray-600">
+              <div className="mb-6 bg-white rounded-lg p-4 shadow-md border">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-semibold text-gray-800">{sections[1].title}</h3>
+                  <button className="text-gray-400 hover:text-gray-600 transition">
                     ▼
                   </button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {sections[1].lessons.map((lesson, index) => (
                     <div
                       key={index}
-                      className="flex items-center gap-2 text-sm"
+                      className="flex items-center gap-3 text-sm p-2 rounded hover:bg-gray-50 transition"
                     >
                       {getIcon(lesson.type)}
-                      <span>{lesson.title}</span>
+                      <span className="text-gray-700">{lesson.title}</span>
                     </div>
                   ))}
                 </div>
               </div>
               <button
-                className="w-full py-2 border border-blue-500 text-blue-500 rounded hover:bg-blue-50"
+                className="w-full py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-medium shadow-md"
                 onClick={() => setShowModal(true)}
               >
                 Create new classroom

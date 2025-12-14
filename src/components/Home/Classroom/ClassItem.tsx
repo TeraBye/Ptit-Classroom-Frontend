@@ -12,7 +12,7 @@ const Item = ({ classroom }: { classroom: any }) => {
       {/* Banner */}
       <div className="relative">
         <Image
-          src="https://i.pinimg.com/736x/33/5d/41/335d419b07dafe16553ddd6ea5a1de14.jpg" // Thay bằng ảnh thật
+          src="https://i.pinimg.com/564x/20/9b/e8/209be8b95ef7f87e37f5052f94e4dbf0.jpg" // Thay bằng ảnh thật
           alt="Course"
           width={400}
           height={200}
