@@ -15,7 +15,11 @@ const formatTime = (seconds: number) => {
   return `${m}:${s}`;
 };
 
-export default function Quiz() {
+interface QuizProps {
+  isPractice?: boolean;
+}
+
+export default function Quiz({ isPractice = false }: QuizProps) {
   const [questions, setQuestions] = useState<
     { question: string; options: string[]; id: number }[]
   >([]);
@@ -32,6 +36,7 @@ export default function Quiz() {
 
   const params = useParams();
   const examId = params.examId;
+  const classId = params.classId;
   const router = useRouter();
 
   const [user, setUser] = useState<any>(null);
@@ -210,7 +215,9 @@ export default function Quiz() {
     <div className="w-full max-w-3xl mx-auto p-6 bg-white shadow rounded-md relative">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">📝 Làm bài thi</h1>
+        <h1 className="text-2xl font-bold text-gray-800">
+          {isPractice ? '📚 Bài luyện tập' : '📝 Làm bài thi'}
+        </h1>
         <div className="text-lg font-semibold text-red-600 bg-red-100 px-4 py-2 rounded shadow">
           ⏳ {formatTime(timeLeft)}
         </div>
@@ -284,7 +291,9 @@ export default function Quiz() {
       {showResultModal && resultData && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl text-center animate-fade-in">
-            <h2 className="text-2xl font-bold text-green-600 mb-4"> Hoàn thành bài thi!</h2>
+            <h2 className="text-2xl font-bold text-green-600 mb-4">
+              {isPractice ? '✅ Hoàn thành bài luyện tập!' : '🎉 Hoàn thành bài thi!'}
+            </h2>
             <p className="text-lg mb-2">Điểm số: <strong>{resultData.score}</strong></p>
             <p className="mb-1">
               Số câu đúng: <strong>{resultData.numberOfCorrectAnswers}/{questions.length}</strong>
@@ -305,10 +314,14 @@ export default function Quiz() {
             <Button
               onClick={() => {
                 setShowResultModal(false);
-                router.push("/");
+                if (isPractice && classId) {
+                  router.push(`/class/${classId}`);
+                } else {
+                  router.push("/");
+                }
               }}
             >
-              Đóng
+              {isPractice ? 'Quay lại lớp học' : 'Đóng'}
             </Button>
           </div>
         </div>
