@@ -9,7 +9,7 @@ import Logo from "@/components/Layout/Header/Logo";
 import SmallSpinner from "@/components/Common/SmallSpinner";
 import { useAuth } from "@/context/AuthContext";
 
-const Signin = ({ onClose }: { onClose: () => void }) => {
+const Signin = ({ onClose }: { onClose?: () => void }) => {
   const router = useRouter();
   const { setIsAuthenticated } = useAuth();
 
@@ -53,8 +53,11 @@ const Signin = ({ onClose }: { onClose: () => void }) => {
 
       localStorage.setItem("token", token);
 
-      setIsAuthenticated(true); // ✅ Đánh dấu đã đăng nhập
-      onClose(); // ✅ Đóng modal => reset body overflow
+  setIsAuthenticated(true); // ✅ Đánh dấu đã đăng nhập
+  // Call onClose if provided (pages rendering this component as a server component
+  // shouldn't need to pass event handlers). Optional chaining avoids passing
+  // event handlers from server-side rendered pages.
+  onClose?.(); // ✅ Đóng modal => reset body overflow (no-op if not provided)
       router.push("/");
     } catch (error: any) {
       toast.error(error.message || "Something went wrong");

@@ -12,7 +12,10 @@ const SigninPage = () => {
     <>
       <Breadcrumb pageName="Sign In Page" />
 
-      <Signin />
+    {/* This page renders Signin as a standalone page (not a modal). The Signin component
+      accepts an optional onClose handler for modal flows, so when rendering as a full
+      page we don't need to pass one. */}
+    <Signin />
     </>
   );
 };

@@ -1,4 +1,22 @@
-export default function JoinRequestItem({ r, processing, onApprove, onReject }) {
+import type { MouseEvent } from "react";
+
+type JoinRequest = {
+  id?: number;
+  avatar?: string;
+  fullName: string;
+  username: string;
+  requestedAt: string | number | Date;
+};
+
+type Props = {
+  r: JoinRequest;
+  processing?: boolean;
+  // Handlers may be async (return Promise<void>) in callers, allow both
+  onApprove?: (e?: MouseEvent<HTMLButtonElement>) => void | Promise<void>;
+  onReject?: (e?: MouseEvent<HTMLButtonElement>) => void | Promise<void>;
+};
+
+export default function JoinRequestItem({ r, processing = false, onApprove = () => {}, onReject = () => {} }: Props) {
   return (
     <li className="border rounded-lg p-3">
       <div className="flex gap-2 mb-2">
