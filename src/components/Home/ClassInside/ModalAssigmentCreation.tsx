@@ -23,6 +23,7 @@ export function AssignmentModal({ isOpen, onClose }: { isOpen: boolean; onClose:
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [user, setUser] = useState<any>(null);
+  const [createLoading, setCreateLoading] = useState<boolean>(false);
 
   const router = useRouter();
   const params = useParams();
@@ -66,6 +67,11 @@ export function AssignmentModal({ isOpen, onClose }: { isOpen: boolean; onClose:
   };
 
   const handlePost = async () => {
+    if (!title.trim()) {
+      return;
+    }
+
+    setCreateLoading(true);
     try {
       let fileUrl = "";
       if (files.length > 0) {
@@ -97,102 +103,168 @@ export function AssignmentModal({ isOpen, onClose }: { isOpen: boolean; onClose:
       onClose();
     } catch (err) {
       console.error(err);
+    } finally {
+      setCreateLoading(false);
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-lg w-[450px] shadow-lg font-sans"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="bg-blue-500 text-white text-lg font-semibold p-3 rounded-t-lg flex justify-between items-center">
-          <span>New Lesson</span>
-          <button onClick={onClose} className="hover:text-gray-200">X</button>
-        </div>
-
-        <div className="p-4 space-y-4 text-gray-800">
-          <input
-            type="text"
-            placeholder="Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full p-2 border rounded text-gray-800 placeholder-gray-400 focus:outline-none focus:ring focus:border-blue-300"
-          />
-
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white w-full max-w-3xl rounded-xl shadow-xl overflow-hidden grid grid-cols-12" onClick={(e) => e.stopPropagation()}>
+        {/* Left visual (sky-blue, instructional) */}
+        <div className="col-span-4 bg-gradient-to-b from-sky-600 to-indigo-600 text-white p-6 flex flex-col justify-between">
           <div>
-            <label className="block text-sm font-medium mb-1">Deadline</label>
-            <DatePicker
-              selected={deadline}
-              onChange={(date) => setDeadline(date)}
-              dateFormat="yyyy/MM/dd"
-              placeholderText="Choose deadline"
-              className="w-full p-2 border rounded text-center text-gray-800 placeholder-gray-400 focus:outline-none focus:ring focus:border-blue-300"
-            />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-white/20 rounded-lg p-2">
+                <Paperclip size={22} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">New Assignment</h3>
+                <p className="text-xs opacity-90">Create tasks quickly and clearly for your class.</p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="bg-white/10 p-2 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Set a clear deadline</p>
+                  <p className="text-xs opacity-90">Helps students manage time and submissions.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="bg-white/10 p-2 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M8 2a1 1 0 00-1 1v1H5a2 2 0 00-2 2v2h14V6a2 2 0 00-2-2h-2V3a1 1 0 00-1-1H8z" />
+                    <path d="M3 11v3a2 2 0 002 2h10a2 2 0 002-2v-3H3z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Attach resources</p>
+                  <p className="text-xs opacity-90">Upload materials or examples for students.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="bg-white/10 p-2 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M9 2a1 1 0 00-1 1v6H5a1 1 0 000 2h3v6a1 1 0 002 0v-6h3a1 1 0 100-2H11V3a1 1 0 00-1-1z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Provide instructions</p>
+                  <p className="text-xs opacity-90">Include rubric or expectations for grading.</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <textarea
-            placeholder="Content"
-            rows={4}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="w-full p-2 border rounded text-gray-800 placeholder-gray-400 focus:outline-none focus:ring focus:border-blue-300"
-          />
+          <p className="text-xs opacity-80">Tip: use clear titles and examples to improve student outcomes.</p>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Attach file</label>
-            <div className="flex items-center gap-2">
-              <label htmlFor="file-upload" className="cursor-pointer text-blue-500 hover:text-blue-700 flex items-center gap-1">
-                <Paperclip size={20} />
-                <span>Choose file</span>
-              </label>
+        {/* Right form */}
+        <div className="col-span-8 p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold">Create Assignment</h2>
+              <p className="text-sm text-gray-500 mt-1">Provide title, deadline, instructions and attachments.</p>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-700">✕</button>
+          </div>
+
+          <div className="mt-5 space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700">Title <span className="text-red-500">*</span></label>
               <input
-                type="file"
-                multiple
-                id="file-upload"
-                onChange={handleFileChange}
-                className="hidden"
-                accept=".doc,.docx,.pdf,.rar,.zip"
+                type="text"
+                placeholder="Assignment title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                disabled={createLoading}
+                className="mt-1 block w-full p-2 rounded border focus:outline-none focus:ring-2 focus:ring-emerald-200"
               />
             </div>
 
-            <div className="mt-2 flex flex-wrap gap-2">
-              {files.map((file, index) => (
-                <span
-                  key={index}
-                  className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full flex items-center gap-1"
-                >
-                  📄 {file.name}
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="ml-1 text-blue-600 hover:text-red-500"
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium text-gray-700">Deadline</label>
+                <DatePicker
+                  selected={deadline}
+                  onChange={(date) => setDeadline(date)}
+                  dateFormat="yyyy/MM/dd"
+                  placeholderText="Choose deadline"
+                  disabled={createLoading}
+                  className="mt-1 block w-full p-2 rounded border text-center"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">Attach file</label>
+                <div className="mt-1 flex items-center gap-2">
+                  <label htmlFor="file-upload" className={`cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded bg-white/5 text-sm ${createLoading ? 'opacity-50 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
+                    <Paperclip size={16} />
+                    <span className="text-white">Choose file</span>
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    id="file-upload"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept=".doc,.docx,.pdf,.rar,.zip"
+                    disabled={createLoading}
+                  />
+                </div>
+
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {files.map((file, index) => (
+                    <span key={index} className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full flex items-center gap-2">
+                      <span>📄 {file.name}</span>
+                      <button onClick={() => removeFile(index)} disabled={createLoading} className="text-gray-500 hover:text-red-500">
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700">Instructions</label>
+              <textarea
+                placeholder="Details, steps, grading rubric..."
+                rows={5}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                disabled={createLoading}
+                className="mt-1 block w-full p-2 rounded border focus:outline-none focus:ring-2 focus:ring-emerald-200"
+              />
             </div>
           </div>
-        </div>
 
-        <div className="flex justify-end gap-3 px-4 py-3 border-t">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border rounded hover:bg-gray-100"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handlePost}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Post
-          </button>
+          <div className="mt-6 flex justify-end gap-3">
+            <button onClick={onClose} disabled={createLoading} className="px-4 py-2 border rounded hover:bg-gray-50">Cancel</button>
+            <button
+              onClick={handlePost}
+              disabled={createLoading || !title.trim()}
+              className={`px-4 py-2 rounded text-white flex items-center gap-2 ${!createLoading && title.trim() ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-emerald-300 cursor-not-allowed'}`}
+            >
+              {createLoading ? (
+                <svg className="h-4 w-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+              ) : null}
+              {createLoading ? 'Posting...' : 'Post'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

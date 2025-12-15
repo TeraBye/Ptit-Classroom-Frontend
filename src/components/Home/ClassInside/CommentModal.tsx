@@ -47,7 +47,7 @@ export const CommentModal = ({
         });
       },
       onDisconnect: () => {
-        console.log("❌ Disconnected from comment WebSocket");
+        console.log("❌ Disconnected from comment WebSocket - will reconnect in 5s");
       },
       reconnectDelay: 5000,
     });
