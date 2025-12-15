@@ -42,7 +42,7 @@ export default function ClassCard({ classroom, onDelete, onEdit, onActivate, cur
     <div className={`w-64 bg-white rounded-lg overflow-hidden shadow-md border ${isActive ? "" : "opacity-60"}`}>
       <div className="relative">
         <Image
-          src={classroom.banner || "https://i.pinimg.com/736x/33/5d/41/335d419b07dafe16553ddd6ea5a1de14.jpg"}
+          src={classroom.banner || "https://i.pinimg.com/564x/20/9b/e8/209be8b95ef7f87e37f5052f94e4dbf0.jpg"}
           alt={classroom.name}
           width={400}
           height={200}

@@ -15,6 +15,7 @@ export interface CommentProps {
 
 const getTimeAgo = (createdAt: string) => {
   const createdDate = new Date(createdAt);
+  createdDate.setHours(createdDate.getHours() + 7); // Cộng 7 giờ cho múi giờ Việt Nam
   const now = new Date();
   const diffMs = now.getTime() - createdDate.getTime();
   const seconds = Math.floor(diffMs / 1000);
