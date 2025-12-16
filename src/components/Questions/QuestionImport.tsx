@@ -120,17 +120,17 @@ export default function QuestionImport({ onImported, onRefreshData }: Props) {
                 const data = res.data?.result;
                 setJobStatus(data);
                 const status = String(data?.status || "").toUpperCase();
-                
+
                 // Treat common terminal states from backend as completion
                 const terminal = new Set(["COMPLETED", "FAILED", "SUCCESS", "DONE", "ERROR"]);
                 if (terminal.has(status)) {
                     stopPolling();
                     setUploading(false);
                     setJobId(null);
-                    
+
                     if (status === "SUCCESS" || status === "COMPLETED" || status === "DONE") {
                         toast.success("Import successful!");
-                        
+
                         // Fetch lại dữ liệu mới khi import thành công
                         if (onRefreshData) {
                             try {
@@ -140,7 +140,7 @@ export default function QuestionImport({ onImported, onRefreshData }: Props) {
                                 toast.warning("Import successful but unable to reload data. Please refresh the page.");
                             }
                         }
-                        
+
                         onImported?.(data);
                     } else {
                         const errorMessage = data?.message || "Import failed";
@@ -291,13 +291,12 @@ export default function QuestionImport({ onImported, onRefreshData }: Props) {
                     <div className="flex justify-between items-center mb-2">
                         <div>
                             <span className="font-semibold">Status: </span>
-                            <strong className={`${
-                                jobStatus.status === "SUCCESS" || jobStatus.status === "COMPLETED" || jobStatus.status === "DONE"
+                            <strong className={`${jobStatus.status === "SUCCESS" || jobStatus.status === "COMPLETED" || jobStatus.status === "DONE"
                                     ? "text-green-600"
                                     : jobStatus.status === "FAILED" || jobStatus.status === "ERROR" || jobStatus.status === "TIMEOUT"
-                                    ? "text-red-600"
-                                    : "text-blue-600"
-                            }`}>{jobStatus.status}</strong>
+                                        ? "text-red-600"
+                                        : "text-blue-600"
+                                }`}>{jobStatus.status}</strong>
                         </div>
                         {uploading && (
                             <button

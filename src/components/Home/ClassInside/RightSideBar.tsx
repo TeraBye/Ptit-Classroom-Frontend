@@ -402,7 +402,7 @@ function NewExamModal({
   open: boolean;
   onClose: () => void;
   teacherId: string;
-  onExamCreated: (data: any) => void; 
+  onExamCreated: (data: any) => void;
 }) {
   const [subjects, setSubjects] = useState<{ id: number; name: string }[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);

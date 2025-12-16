@@ -24,9 +24,10 @@ export async function createClassroom(data: any, token?: string) {
   return res.data.result;
 }
 
-export async function getAllSubjects(token?: string) {
+export async function getAllSubjects(token?: string, username?: string) {
   try {
     const res = await axiosInstance.get(`/classrooms/subjects`, {
+      params: username ? { username } : undefined,
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
     const result = res.data?.result ?? res.data;
