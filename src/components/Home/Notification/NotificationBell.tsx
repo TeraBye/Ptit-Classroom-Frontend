@@ -46,7 +46,7 @@ export default function NotificationBell() {
           content: n.content,
           timestamp: n.timestamp || n.timeStamp,
           avatar: n.avatar || n.avatarUrl || null,
-          isRead: !!n.isRead,
+          isRead: !!(n.read || n.isRead),
         }));
         setNotifications(data);
         setCount(data.filter((n: any) => !n.isRead).length);

@@ -325,12 +325,13 @@ export default function PracticeHistory() {
             {/* Header */}
             <div className="flex justify-between items-center p-4 border-b bg-purple-500 text-white rounded-t-xl">
               <div>
-                <h2 className="text-lg font-semibold">📄 Chi tiết bài làm</h2>
+                <h2 className="text-lg f
+                ont-semibold">📄 Chi tiết bài làm</h2>
                 {examSubmission && (
                   <p className="text-sm opacity-90">
-                    Điểm: {examSubmission.score.toFixed(1)} | 
-                    Đúng: {examSubmission.numberOfCorrectAnswers}/{selectedExam?.numberOfQuestion} | 
-                    Thời gian: {formatExamTime(examSubmission.examTime)}
+                    Điểm: {examSubmission?.score != null ? examSubmission.score.toFixed(1) : '—'} | 
+                    Đúng: {examSubmission?.numberOfCorrectAnswers ?? '—'}/{selectedExam?.numberOfQuestion ?? '—'} | 
+                    Thời gian: {examSubmission?.examTime != null ? formatExamTime(examSubmission.examTime) : '—'}
                   </p>
                 )}
               </div>

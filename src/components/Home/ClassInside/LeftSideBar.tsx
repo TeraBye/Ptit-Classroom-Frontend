@@ -71,9 +71,15 @@ export function LeftSidebar() {
       <p className="text-gray-600">{user?.role}</p>
       <p className="text-gray-600">Class code: {classroom?.classCode}</p>
 
-      <Button className="mt-4 w-full" variant="outline">
-        Join meeting
-      </Button>
+      {classroom?.meetLink ? (
+        <Button
+          className="mt-4 w-full"
+          variant="outline"
+          onClick={() => window.open(String(classroom.meetLink), "_blank")}
+        >
+          Join meeting
+        </Button>
+      ) : null}
 
       {user?.role === "TEACHER" && (
         <Button

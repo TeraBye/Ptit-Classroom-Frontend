@@ -18,7 +18,7 @@ import {
   getStudentClasses,
 } from "@/app/api/libApi/api"; // import hàm vừa tạo
 import axiosInstance from '@/utils/axiosInstance';
-import { toastError, toastSuccess } from '@/utils';
+import { toastError, toastSuccess, toastInfo } from '@/utils';
 import EditClassModal from './EditClassModal';
 import { useRouter } from "next/navigation";
 
@@ -77,6 +77,7 @@ const Classroom = () => {
   const [page, setPage] = useState(0);
   const [classrooms, setClassrooms] = useState<any[]>([]);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   // const { user } = useAuth();
 
   // State cho modal
@@ -236,6 +237,7 @@ const Classroom = () => {
         );
         setClassrooms(result.content); // content là mảng lớp học
         setTotalPages(result.totalPages); // totalPages từ backend trả về
+        setTotalItems(result.totalElements ?? result.totalItems ?? 0);
         setLoading(false);
       };
       fetchClassrooms();
@@ -249,6 +251,7 @@ const Classroom = () => {
         );
         setClassrooms(result.content); // content là mảng lớp học
         setTotalPages(result.totalPages); // totalPages từ backend trả về
+        setTotalItems(result.totalElements ?? result.totalItems ?? 0);
         setLoading(false);
       };
       fetchClassrooms();
@@ -257,8 +260,9 @@ const Classroom = () => {
 
   useEffect(() => {
     if (showModal && token) {
-      // Lấy danh sách môn học — đảm bảo unwrap `result.content` nếu backend trả wrapper
-      getAllSubjects(token)
+      // Lấy danh sách môn học — nếu là teacher thì truyền username để backend trả về môn của GV đó
+      const username = user?.role === 'TEACHER' ? user?.username : undefined;
+      getAllSubjects(token, username)
         .then((res: any) => {
           const content = res?.result?.content ?? res?.content ?? res;
           setSubjects(Array.isArray(content) ? content : []);
@@ -442,26 +446,24 @@ const Classroom = () => {
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => setActiveTab("active")}
-                    className={`px-3 py-1 rounded ${
-                      activeTab === "active"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-100"
-                    }`}
+                    className={`px-3 py-1 rounded ${activeTab === "active"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100"
+                      }`}
                   >
                     Active
                   </button>
                   <button
                     onClick={() => setActiveTab("inactive")}
-                    className={`px-3 py-1 rounded ${
-                      activeTab === "inactive"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-100"
-                    }`}
+                    className={`px-3 py-1 rounded ${activeTab === "inactive"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100"
+                      }`}
                   >
                     Inactive
                   </button>
                   <div className="text-sm text-gray-500 ml-4">
-                    Total: {classrooms.length}
+                    Total: {totalItems}
                   </div>
                 </div>
                 <div className="text-sm text-gray-500">
@@ -704,7 +706,19 @@ const Classroom = () => {
                     setClassCode("");
                     router.push(`/class-inside/${res.classroom.id}`);
                   } catch (err) {
-                    toastError(getErrorMessage(err));
+                    const msg = getErrorMessage(err);
+                    if (typeof msg === 'string') {
+                      const lower = msg.toLowerCase();
+                      if (lower.includes('sent successfully') || lower.includes('waiting for teacher approval')) {
+                        toastSuccess(msg);
+                      } else if (lower.includes('already sent') || lower.includes('already processed')) {
+                        toastInfo(msg);
+                      } else {
+                        toastError(msg);
+                      }
+                    } else {
+                      toastError(String(msg));
+                    }
                   } finally {
                     setJoinLoading(false);
                   }
