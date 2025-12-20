@@ -69,7 +69,9 @@ export function LeftSidebar() {
       </div>
       <h2 className="mt-4 text-xl font-bold">{user?.fullName}</h2>
       <p className="text-gray-600">{user?.role}</p>
+      <p className="text-gray-600">Class: {classroom?.name}</p>
       <p className="text-gray-600">Class code: {classroom?.classCode}</p>
+      <p className="text-gray-600">Subject: {classroom?.subjectName}</p>
 
       {classroom?.meetLink ? (
         <Button
